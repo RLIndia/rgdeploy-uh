@@ -120,7 +120,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - config:*
+
               - ec2:DescribeImages
               - ec2:CopyImage
               - ec2:ModifyImageAttribute
@@ -135,10 +135,7 @@ Resources:
               - iam:detachRolePolicy
               - iam:updateAssumeRolePolicy
               - elasticloadbalancing:RegisterTargets
-              - ses:*
-              - sns:*
               - sts:AssumeRole
-              - cloudformation:*
             Resource: "*"
   RGPortalSG:
     Type: AWS::EC2::SecurityGroup
@@ -157,6 +154,9 @@ Resources:
           ToPort: "22"
           CidrIp:
             Ref: AccessFromCidr
+      SecurityGroupEgress:  # Adding egress rule
+        - IpProtocol: "-1"  # Allow all protocols
+          CidrIp: 0.0.0.0/0  # Allow all outbound traffic to all destinations      
       Tags:
         - Key: Name
           Value:
@@ -166,6 +166,28 @@ Resources:
     Properties:
       ImageId: ami-0fb3fe843311c4412
       InstanceType: t3.large
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908                  
+
       Monitoring: "true"
       DisableApiTermination: "false"
       IamInstanceProfile:
@@ -179,6 +201,27 @@ Resources:
             VolumeSize: "50"
             DeleteOnTermination: "true"
             Encrypted: "true"
+            Tags:
+              - Key: CostCenter
+                Value: PG000000
+              - Key: CriticalityTier
+                Value: Business Operational
+              - Key: Compliance
+                Value: HIPAA
+              - Key: Environment
+                Value: QA
+              - Key: ApplicationName
+                Value: ResearchGatewayQA
+              - Key: Department
+                Value: DataScience
+              - Key: ApplicationCustodian
+                Value: txs908
+              - Key: ServiceNow
+                Value: XXX
+              - Key: DepartmentEmail
+                Value: txs908@miami.edu
+              - Key: UHITOwner
+                Value: txs908       
       SubnetId:
         Ref: Subnet1
       SecurityGroupIds:

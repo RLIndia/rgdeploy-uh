@@ -349,16 +349,15 @@ function create_doc_db() {
 	echo "Waiting for stack $1 to finish deploying..."
 	aws cloudformation wait stack-create-complete --stack-name "$1"
 }
-
-function create_image_builder() {
-	echo "Creating new stack $1"
-	aws cloudformation deploy --template-file "$localhome"/products/rg_imgbldr.yml --stack-name "$1" \
+#function create_image_builder() {
+	#echo "Creating new stack $1"
+	#aws cloudformation deploy --template-file "$localhome"/products/rg_imgbldr.yml --stack-name "$1" \
 		--parameter-overrides PrivateSubnetId="$subnet1id" VPCId="$vpcid" SourceBucketName="$bucketname" \
     --capabilities CAPABILITY_IAM
-	echo "Waiting for stack $1 to finish deploying..."
-	aws cloudformation wait stack-create-complete --stack-name "$1"
+	#echo "Waiting for stack $1 to finish deploying..."
+	#aws cloudformation wait stack-create-complete --stack-name "$1"
 
-}
+#} 
 
 
 function create_main_stack() {
