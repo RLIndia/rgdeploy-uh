@@ -151,6 +151,27 @@ Resources:
       VpcSecurityGroupIds: 
         - !GetAtt DocumentDBSecurityGroup.GroupId
       StorageEncrypted : true  
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908      
   DBInstance:
     Type: "AWS::DocDB::DBInstance"
     Properties:

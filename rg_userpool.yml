@@ -63,7 +63,7 @@ Resources:
     Type: "AWS::Cognito::UserPool"
     Properties:
       UserPoolName: !Ref "UserPoolNameParam"
-      MfaConfiguration: OPTIONAL
+      
       Policies:
         PasswordPolicy:
           MinimumLength: 8
