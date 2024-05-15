@@ -201,27 +201,30 @@ Resources:
             VolumeSize: "50"
             DeleteOnTermination: "true"
             Encrypted: "true"
-            Tags:
-              - Key: CostCenter
-                Value: PG000000
-              - Key: CriticalityTier
-                Value: Business Operational
-              - Key: Compliance
-                Value: HIPAA
-              - Key: Environment
-                Value: QA
-              - Key: ApplicationName
-                Value: ResearchGatewayQA
-              - Key: Department
-                Value: DataScience
-              - Key: ApplicationCustodian
-                Value: txs908
-              - Key: ServiceNow
-                Value: XXX
-              - Key: DepartmentEmail
-                Value: txs908@miami.edu
-              - Key: UHITOwner
-                Value: txs908       
+      PropagateTagsToVolumeOnCreation: true
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908              
+        
+               
       SubnetId:
         Ref: Subnet1
       SecurityGroupIds:
@@ -244,7 +247,7 @@ Resources:
               fixmongo.sh ${Environment}-cc ${AdminPassword} rguser '${UserPassword}' ${RGUrl}
               fixconfigs.sh
               start_server.sh ${RGUrl} ${TGARN}
-              /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
+              #/opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
             - !Sub |
               #!/bin/bash
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
@@ -259,7 +262,7 @@ Resources:
               fixconfigs.sh
               fixdocdb.sh ${DocumentDBInstanceURL} ${Environment}-cc rguser '${UserPassword}' ${RGUrl}
               start_server.sh ${RGUrl} ${TGARN}
-              /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
+              #/opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
     CreationPolicy:
       ResourceSignal:
         Timeout: PT9M
