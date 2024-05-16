@@ -257,15 +257,12 @@ Resources:
               export S3_SOURCE="${CFTBucketName}"
               aws s3 cp s3://${CFTBucketName}/updatescripts.sh /home/ubuntu
               aws s3 cp s3://${CFTBucketName}/config.tar.gz /home/ubuntu               
-              chmod +x /home/ubuntu/updatescripts.sh
+              chmod +x /hme/ubuntu/updatescripts.sh
               /home/ubuntu/updatescripts.sh
               fixconfigs.sh
               fixdocdb.sh ${DocumentDBInstanceURL} ${Environment}-cc rguser '${UserPassword}' ${RGUrl}
               start_server.sh ${RGUrl} ${TGARN}
               #/opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT9M
 Outputs:
   RGAccessURL:
     Description: URL to access Research Gateway

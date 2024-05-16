@@ -61,7 +61,12 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - ssm:*
+              - ssm:DescribeInstanceInformation
+              - ssm:DescribeParameters
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:GetParametersByPath
+              - ssm:PutParameter
             Resource: "*"
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy

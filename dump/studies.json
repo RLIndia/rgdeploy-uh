@@ -1,1 +1,35 @@
-[ ]
+[
+{
+    "name" : "Synthea Coherent Data Set",
+    "description" : "This is a synthetic data set that includes FHIR resources, DICOM images, genomic data, physiological data (i.e., ECGs), and simple clinical notes. FHIR links all the data types together.",
+    "tags" : [ 
+        "health", 
+        "bioinformatics", 
+        "life sciences", 
+        "medicine", 
+        "csv", 
+        "dicom", 
+        "genomic", 
+        "imaging"
+    ],
+    "resourceDetails" : [ 
+        {
+            "description" : "Synthetic data set that includes FHIR resources, DICOM images, genomic data, physiological data (i.e., ECGs), and simple clinical notes. FHIR links all the data types together. Data is available as single zip archive or as individual files within an `unzipped` folder.",
+            "arn" : "arn:aws:s3:::synthea-open-data",
+            "region" : "us-east-1",
+            "type" : "s3"
+        }
+    ],
+    "moreInformation" : "The “Coherent Data Set”: Combining Patient Data and Imaging in a Comprehensive Synthetic Health Record.: https://doi.org/10.3390/electronics11081199",
+    "bookmarkedBy" : [],
+    "projectId" : [],
+    "levelOfSharing" : 0,
+    "sharedTo" : [],
+    "studyType" : "Public",
+    "__v" : 0,
+    "isDeleted" : false,
+    "repositoryName" : "Registry of Open Data on AWS",
+    "isShared" : false,
+    "isLinked" : false
+}
+]
