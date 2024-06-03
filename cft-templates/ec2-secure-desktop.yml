@@ -90,7 +90,7 @@ Resources:
             Resource: '*'
           - Effect: Allow
             Action:
-              - 'ssm:*'
+              - 'ssm:*'i
             Resource: '*'
           - Effect: Deny
             NotAction:

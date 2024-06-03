@@ -301,7 +301,37 @@ Resources:
     Properties:
       IamInstanceProfile: !Ref NATInstanceProfile
       InstanceType: !Ref InstanceType
-      ImageId: !Ref AmiId
+      ImageId: !Ref AmiId   
+
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp2
+            VolumeSize: "8"
+            DeleteOnTermination: "true"
+            Encrypted: "true"
+      PropagateTagsToVolumeOnCreation: true
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908              
       SecurityGroupIds:
         - !Ref NATInstanceSG 
       SubnetId: !Ref PublicSubnet1
@@ -386,9 +416,7 @@ Resources:
             systemctl restart squid || service squid restart        
             /opt/aws/bin/cfn-signal -e $? --stack "${AWS::StackName}" --resource "EC2Instance" --region "${AWS::Region}"
 
-      Tags:
-        - Key: Name
-          Value: Secure-NATinstance      
+               
        
 
 Outputs:
