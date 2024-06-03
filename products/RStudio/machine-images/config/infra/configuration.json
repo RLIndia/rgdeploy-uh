@@ -1,9 +1,0 @@
-{
-    "aws_access_key": "EXAMPLEACCESSKEY",
-    "aws_secret_key": "GlJf7+EXAMPLESECRETKEY",
-    "awsRegion": "us-west-2",
-    "vpcId": "vpc-id",
-    "subnetId": "subnet-id",
-    "amiName": "RG-RStudio-AMI",
-    "awsProfile": "qa"
-}
