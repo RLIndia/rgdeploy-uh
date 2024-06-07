@@ -61,12 +61,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - ssm:DescribeInstanceInformation
-              - ssm:DescribeParameters
-              - ssm:GetParameter
-              - ssm:GetParameters
-              - ssm:GetParametersByPath
-              - ssm:PutParameter
+              - ssm:*
             Resource: "*"
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
@@ -90,7 +85,7 @@ Resources:
             Resource: '*'
           - Effect: Allow
             Action:
-              - 'ssm:*'i
+              - 'ssm:*'
             Resource: '*'
           - Effect: Deny
             NotAction:
@@ -441,7 +436,7 @@ Resources:
 
       InstanceType: !Ref "InstanceType"
       
-      ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/linux-nice-dcv-ami}}"
+      ImageId: "ami-0db574d6cf5ed861f"
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: CostCenter
@@ -470,27 +465,7 @@ Resources:
           Ebs:
             VolumeSize: !Ref EBSVolumeSize
             Encrypted: true
-            Tags:
-              - Key: CostCenter
-                Value: PG000000
-              - Key: CriticalityTier
-                Value: Business Operational
-              - Key: Compliance
-                Value: HIPAA
-              - Key: Environment
-                Value: QA
-              - Key: ApplicationName
-                Value: ResearchGatewayQA
-              - Key: Department
-                Value: DataScience
-              - Key: ApplicationCustodian
-                Value: txs908
-              - Key: ServiceNow
-                Value: XXX
-              - Key: DepartmentEmail
-                Value: txs908@miami.edu
-              - Key: UHITOwner
-                Value: txs908       
+              
                  
       NetworkInterfaces:
         - AssociatePublicIpAddress: 'false'
@@ -501,12 +476,30 @@ Resources:
           SubnetId: !Ref Subnet            
       PropagateTagsToVolumeOnCreation: true
       Tags:
-        - Key: Name
-          Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]
-        - Key: Description
-          Value: EC2 workspace instance
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908     
         - Key: cost_resource
           Value: !Sub ${AWS::StackName}
+        - Key: Name
+          Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]  
 
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
