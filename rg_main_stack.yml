@@ -120,7 +120,7 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - config:*
+
               - ec2:DescribeImages
               - ec2:CopyImage
               - ec2:ModifyImageAttribute
@@ -135,10 +135,7 @@ Resources:
               - iam:detachRolePolicy
               - iam:updateAssumeRolePolicy
               - elasticloadbalancing:RegisterTargets
-              - ses:*
-              - sns:*
               - sts:AssumeRole
-              - cloudformation:*
             Resource: "*"
   RGPortalSG:
     Type: AWS::EC2::SecurityGroup
@@ -157,6 +154,9 @@ Resources:
           ToPort: "22"
           CidrIp:
             Ref: AccessFromCidr
+      SecurityGroupEgress:  # Adding egress rule
+        - IpProtocol: "-1"  # Allow all protocols
+          CidrIp: 0.0.0.0/0  # Allow all outbound traffic to all destinations      
       Tags:
         - Key: Name
           Value:
@@ -166,6 +166,28 @@ Resources:
     Properties:
       ImageId: ami-0fb3fe843311c4412
       InstanceType: t3.large
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908                  
+
       Monitoring: "true"
       DisableApiTermination: "false"
       IamInstanceProfile:
@@ -179,6 +201,30 @@ Resources:
             VolumeSize: "50"
             DeleteOnTermination: "true"
             Encrypted: "true"
+      PropagateTagsToVolumeOnCreation: true
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908              
+        
+               
       SubnetId:
         Ref: Subnet1
       SecurityGroupIds:
@@ -201,7 +247,7 @@ Resources:
               fixmongo.sh ${Environment}-cc ${AdminPassword} rguser '${UserPassword}' ${RGUrl}
               fixconfigs.sh
               start_server.sh ${RGUrl} ${TGARN}
-              /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
+              #/opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
             - !Sub |
               #!/bin/bash
               exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
@@ -211,15 +257,12 @@ Resources:
               export S3_SOURCE="${CFTBucketName}"
               aws s3 cp s3://${CFTBucketName}/updatescripts.sh /home/ubuntu
               aws s3 cp s3://${CFTBucketName}/config.tar.gz /home/ubuntu               
-              chmod +x /home/ubuntu/updatescripts.sh
+              chmod +x /hme/ubuntu/updatescripts.sh
               /home/ubuntu/updatescripts.sh
               fixconfigs.sh
               fixdocdb.sh ${DocumentDBInstanceURL} ${Environment}-cc rguser '${UserPassword}' ${RGUrl}
               start_server.sh ${RGUrl} ${TGARN}
-              /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
-    CreationPolicy:
-      ResourceSignal:
-        Timeout: PT9M
+              #/opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource RGEC2Instance --region ${AWS::Region}
 Outputs:
   RGAccessURL:
     Description: URL to access Research Gateway

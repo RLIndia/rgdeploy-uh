@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-if [ -f /usr/local/bin/swb_do_not_delete ]
-then
-echo "file exists"
-else
-sudo sed -i '/Begin_only_for_SWB/,/End_only_for_SWB/d' /etc/nginx/nginx.conf
-sudo service nginx restart
-fi

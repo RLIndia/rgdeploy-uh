@@ -63,6 +63,7 @@ Resources:
     Type: "AWS::Cognito::UserPool"
     Properties:
       UserPoolName: !Ref "UserPoolNameParam"
+      
       Policies:
         PasswordPolicy:
           MinimumLength: 8
@@ -248,7 +249,6 @@ Resources:
       EmailVerificationMessage: "Your verification code is {####}. "
       EmailVerificationSubject: "Your verification code"
       SmsAuthenticationMessage: "Your authentication code is {####}. "
-      MfaConfiguration: "OFF"
       EmailConfiguration:
         EmailSendingAccount: "COGNITO_DEFAULT"
       AdminCreateUserConfig:
@@ -348,7 +348,10 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - logs:*
+                  - logs:CreateLogDelivery
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:DeleteLogGroup
                 Resource: arn:aws:logs:*:*:*
   LambdaFunction1:
     Type: "AWS::Lambda::Function"
@@ -368,6 +371,27 @@ Resources:
       Timeout: 3
       TracingConfig:
         Mode: "PassThrough"
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908       
 
   LambdaFunction2:
     Type: "AWS::Lambda::Function"
@@ -387,6 +411,27 @@ Resources:
       Timeout: 3
       TracingConfig:
         Mode: "PassThrough"
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908   
 
 Outputs:
   UserPoolId:

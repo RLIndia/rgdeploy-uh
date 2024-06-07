@@ -61,7 +61,12 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - ssm:*
+              - ssm:DescribeInstanceInformation
+              - ssm:DescribeParameters
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:GetParametersByPath
+              - ssm:PutParameter
             Resource: "*"
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
@@ -85,7 +90,7 @@ Resources:
             Resource: '*'
           - Effect: Allow
             Action:
-              - 'ssm:*'
+              - 'ssm:*'i
             Resource: '*'
           - Effect: Deny
             NotAction:
@@ -438,12 +443,54 @@ Resources:
       
       ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/linux-nice-dcv-ami}}"
       IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908       
       
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:
             VolumeSize: !Ref EBSVolumeSize
             Encrypted: true
+            Tags:
+              - Key: CostCenter
+                Value: PG000000
+              - Key: CriticalityTier
+                Value: Business Operational
+              - Key: Compliance
+                Value: HIPAA
+              - Key: Environment
+                Value: QA
+              - Key: ApplicationName
+                Value: ResearchGatewayQA
+              - Key: Department
+                Value: DataScience
+              - Key: ApplicationCustodian
+                Value: txs908
+              - Key: ServiceNow
+                Value: XXX
+              - Key: DepartmentEmail
+                Value: txs908@miami.edu
+              - Key: UHITOwner
+                Value: txs908       
                  
       NetworkInterfaces:
         - AssociatePublicIpAddress: 'false'
