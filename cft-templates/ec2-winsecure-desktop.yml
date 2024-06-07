@@ -7,6 +7,10 @@ Parameters:
   Namespace:
     Type: String
     Description: An environment name that will be prefixed to resource names
+  Password:
+    Type: String
+    NoEcho: True
+    Description: Administrator Password  
   S3Mounts:
     Type: String
     Description: A JSON array of objects with name, bucket, and prefix properties used to mount data  
@@ -153,6 +157,9 @@ Resources:
           $scriptPath = "C:\Users\Administrator\log\user-data.log"
           Start-Transcript -Path $scriptPath -Append  
 
+          echo "setting Administrator to Admin@123"
+          net user Administrator ${Password}
+
           echo "setting user token for nice-dcv"
           C:\Users\Administrator\set_user_token.bat  
 
@@ -168,8 +175,30 @@ Resources:
           <persist>true</persist>          
           
       InstanceType: !Ref 'InstanceType'
-      ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/windows-nice-dcv-ami}}"
-      IamInstanceProfile: !Ref InstanceProfile      
+      ImageId: ami-03cb188048b457a84
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908       
+            
 
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
@@ -185,13 +214,31 @@ Resources:
           SubnetId: !Ref Subnet            
       PropagateTagsToVolumeOnCreation: true
       Tags:
-        - Key: Name
-          Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]
-        - Key: Description
-          Value: EC2 workspace instance
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908     
         - Key: cost_resource
           Value: !Sub ${AWS::StackName}
-
+        - Key: Name
+          Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]  
+      
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
