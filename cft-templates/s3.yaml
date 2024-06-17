@@ -24,18 +24,7 @@ Resources:
   SampleBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref Namespace
-      BucketEncryption: 
-        ServerSideEncryptionConfiguration: 
-        - !If
-          - AES256
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: !Ref SSEAlgorithm
-            BucketKeyEnabled: true
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: !Ref SSEAlgorithm
-              KMSMasterKeyID: !Ref KMSKeyArn
-            BucketKeyEnabled: true    
+      BucketName: !Ref Namespace    
       Tags:
         - Key: cost_resource
           Value: !Sub ${AWS::StackName}
