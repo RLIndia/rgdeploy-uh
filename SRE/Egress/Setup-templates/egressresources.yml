@@ -7,8 +7,116 @@
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Provision all the required resources for TRE Egress application setup in RG.
-
+Parameters:
+  EgressAppAccount:
+    Type: String
+    Description: Account number which is hosting the Egress Add-On Application
+    MinLength: 12
+    MaxLength: 12
+    AllowedPattern: "[0-9]+"
+  RGDomain:
+    Type: String
+    Description: RG Domain that will access the Egress Store
+    AllowedPattern: "*"
 Resources:
+  EgressAccessLogsBucketKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key for Egress Access logs bucket
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable IAM Policies
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+
+  EgressAccessLogsBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: S3 bucket hosting access logs shouldn't have access logging configured
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt EgressAccessLogsBucketKMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  EgressAccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EgressAccessLogsBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: S3ServerAccessLogsPolicy-TRETargetBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-egress-target-bucket*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              ArnLike:
+                "aws:SourceArn":
+                  - !GetAtt TRETargetBucket.Arn
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
+          - Sid: S3ServerAccessLogsPolicy-TRESourceBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-tre-source-bucket*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              ArnLike:
+                "aws:SourceArn":
+                  - !GetAtt TRESourceBucket.Arn
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
+          - Sid: S3ServerAccessLogsPolicy-TREAnalystResultsBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-tre-analyst-results-bucket*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              ArnLike:
+                "aws:SourceArn":
+                  - !GetAtt TREAnalystResultsBucket.Arn
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
+          - Sid: S3ServerAccessLogsPolicy-TRELakeAdminResultsBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-tre-lake-admin-results-bucket*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              ArnLike:
+                "aws:SourceArn":
+                  - !GetAtt TRELakeAdminResultsBucket.Arn
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
   EgressStoreEncryptionKey:
     Type: AWS::KMS::Key
     Properties:
@@ -72,15 +180,15 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
-      # LoggingConfiguration:
-      #   DestinationBucketName: "915161961510-treprod-ldn-pj1-logging"
-      #   LogFilePrefix: egressStore/
+      LoggingConfiguration:
+        DestinationBucketName: !Ref EgressAccessLogsBucket
+        LogFilePrefix: egressStore/
       VersioningConfiguration:
         Status: Enabled
       CorsConfiguration:
         CorsRules:
           - AllowedOrigins:
-              - "https://d2bit1tve2oue7.cloudfront.net"
+              - !Ref RGDomain 
             AllowedMethods:
               - POST
             ExposedHeaders:
@@ -109,6 +217,16 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: false
+          - Sid: Deny requests that do not use TLS 1.2 or higher
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Join ["/", [!GetAtt EgressStoreBucket.Arn, "*"]]
+              - !GetAtt EgressStoreBucket.Arn
+            Condition:
+              NumericLessThan:
+                's3:TLSVersion': '1.2' 
           - Sid: Deny requests that do not use SigV4
             Effect: Deny
             Principal: "*"
@@ -130,9 +248,9 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
-      # LoggingConfiguration:
-      #   DestinationBucketName: "915161961510-treprod-ldn-pj1-logging"
-      #   LogFilePrefix: egressNotificationBucket/
+      LoggingConfiguration:
+        DestinationBucketName: !Ref EgressAccessLogsBucket
+        LogFilePrefix: egressNotificationBucket/
       CorsConfiguration:
         CorsRules:
           - AllowedOrigins:
@@ -167,6 +285,16 @@ Resources:
             Condition:
               Bool:
                 aws:SecureTransport: false
+          - Sid: Deny requests that do not use TLS 1.2 or higher
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Join ["/", [!GetAtt EgressStoreBucket.Arn, "*"]]
+              - !GetAtt EgressStoreBucket.Arn
+            Condition:
+              NumericLessThan:
+                's3:TLSVersion': '1.2' 
           - Sid: Deny requests that do not use SigV4
             Effect: Deny
             Principal: "*"
@@ -183,23 +311,3 @@ Resources:
       KmsMasterKeyId: !Ref EgressStoreEncryptionKey
       TopicName: "EgressTopicTest"
   #Egress Store dynamoDB
-  EgressStoreDb:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: "rg-EgressStorergv28"
-      AttributeDefinitions:
-        - AttributeName: "id"
-          AttributeType: "S"
-        - AttributeName: "workspaceId"
-          AttributeType: "S"
-      KeySchema:
-        - AttributeName: "id"
-          KeyType: "HASH"
-      BillingMode: PAY_PER_REQUEST
-      GlobalSecondaryIndexes:
-        - IndexName: "WorkspaceIdIndex"
-          KeySchema:
-            - AttributeName: "workspaceId"
-              KeyType: "HASH"
-          Projection:
-            ProjectionType: "ALL"
