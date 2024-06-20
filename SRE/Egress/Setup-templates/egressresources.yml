@@ -290,8 +290,8 @@ Resources:
             Principal: "*"
             Action: s3:*
             Resource:
-              - !Join ["/", [!GetAtt EgressStoreBucket.Arn, "*"]]
-              - !GetAtt EgressStoreBucket.Arn
+              - !Join ["/", [!GetAtt EgressNotificationBucket.Arn, "*"]]
+              - !GetAtt EgressNotificationBucket.Arn
             Condition:
               NumericLessThan:
                 's3:TLSVersion': '1.2' 
