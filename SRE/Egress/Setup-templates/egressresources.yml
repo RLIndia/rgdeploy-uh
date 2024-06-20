@@ -61,31 +61,31 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          - Sid: S3ServerAccessLogsPolicy-TRETargetBucket
+          - Sid: S3ServerAccessLogsPolicy-EgressStoreBucket
             Action:
               - "s3:PutObject"
             Effect: Allow
-            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-egress-target-bucket*"
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/egressStore*"
             Principal:
               Service: logging.s3.amazonaws.com
             Condition:
               ArnLike:
                 "aws:SourceArn":
-                  - !GetAtt TRETargetBucket.Arn
+                  - !GetAtt EgressStoreBucket.Arn
               StringEquals:
                 "aws:SourceAccount":
                   - !Sub "${AWS::AccountId}"
-          - Sid: S3ServerAccessLogsPolicy-TRESourceBucket
+          - Sid: S3ServerAccessLogsPolicy-EgressNotificationBucket
             Action:
               - "s3:PutObject"
             Effect: Allow
-            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-tre-source-bucket*"
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/egressNotificationBucket*"
             Principal:
               Service: logging.s3.amazonaws.com
             Condition:
               ArnLike:
                 "aws:SourceArn":
-                  - !GetAtt TRESourceBucket.Arn
+                  - !GetAtt EgressNotificationBucket.Arn
               StringEquals:
                 "aws:SourceAccount":
                   - !Sub "${AWS::AccountId}"
