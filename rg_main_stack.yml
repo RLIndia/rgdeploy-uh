@@ -121,7 +121,6 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-
               - ec2:DescribeImages
               - ec2:CopyImage
               - ec2:ModifyImageAttribute
