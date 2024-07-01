@@ -86,6 +86,8 @@
         "RgResearcher"
       ]
     },
+    "groupToOrgMapping": "RgOU",
+    "groupToProjectMapping": "RgProject",
     "roleMapToRg": {
       "0": "researcher",
       "1": "principal",
@@ -95,9 +97,10 @@
   "azureAdConfig":{
     "directoryId": "398de9f4-7b9b-4bec-b0ed-69737fa45cf4",
     "clientID": "76973bbb-ed42-48f9-a8ae-c131820c650e",
-    "redirectUrl": "https://enterprise-test1.rlcatalyst.com/logout/auth/callback",
+    "redirectUrl": "https://enterprise-test1.rlcatalyst.com/auth/callback",
     "clientSecret": "_Df8Q~knreZNJ0O.fGbJhGWhfXVGaAxX.lCnZcTP",
-    "destroySessionUrl" : "https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=https://enterprise-test1.rlcatalyst.com/logout"
+    "destroySessionUrl" : "https://login.microsoftonline.com/common/oauth2/logout?post_logout_redirect_uri=https://enterprise-test1.rlcatalyst.com/logout",
+    "groupMatchValue": "RG"
   },
   "baseURL": "REPLACE_WITH_BASE_URL",
   "stateChangeEventTriggerURL": "http://sp2_cc-3102:3002/provisionProductEvent",
