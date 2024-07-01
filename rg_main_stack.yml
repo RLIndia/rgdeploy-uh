@@ -119,23 +119,35 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allow
+          - Sid: "InstancePermissions"
+            Effect: Allow
             Action:
               - ec2:DescribeImages
               - ec2:CopyImage
               - ec2:ModifyImageAttribute
               - ec2:CreateNetworkInterface
-              - iam:attachRolePolicy
-              - iam:createPolicy
-              - iam:createPolicyVersion
-              - iam:createRole
-              - iam:deletePolicy
-              - iam:deletePolicyVersion
-              - iam:detachRolePolicy
-              - iam:updateAssumeRolePolicy
               - elasticloadbalancing:RegisterTargets
               - sts:AssumeRole
             Resource: "*"
+          - Sid: "RoleRelatedPermissions"
+            Effect: Allow
+            Action:
+              - iam:AttachRolePolicy
+              - iam:CreateRole
+              - iam:DetachRolePolicy
+            Resource: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:role/${BaseAccountPolicyName}"
+          - Sid: "PolicyRelatedPermissions"
+            Effect: Allow
+            Action:
+              - iam:CreatePolicy
+              - iam:CreatePolicyVersion
+              - iam:DeletePolicy
+              - iam:DeletePolicyVersion
+              - iam:UpdateAssumeRolePolicy
+            Resource: 
+              - "arn:aws:iam::*:policy/RG-Cross-Account-Policy*"
+
   RGPortalSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
