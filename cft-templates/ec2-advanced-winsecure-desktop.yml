@@ -1,0 +1,266 @@
+Metadata: 
+  License: Apache-2.0
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template to create an GPU based EC2 Windows Advanced Desktop for Secure Research instance with NICE DCV pre installed..'
+Parameters:
+
+  Namespace:
+    Type: String
+    Description: An environment name that will be prefixed to resource names
+  Password:
+    Type: String
+    NoEcho: True
+    Description: Administrator Password  
+  S3Mounts:
+    Type: String
+    Description: A JSON array of objects with name, bucket, and prefix properties used to mount data  
+  IamPolicyDocument:
+    Type: String
+    Description: The IAM policy to be associated with the launched workstation 
+  VPC:
+    Description: The VPC in which the EC2 instance will reside
+    Type: AWS::EC2::VPC::Id
+  Subnet:
+    Description: The VPC subnet in which the EC2 instance will reside
+    Type: AWS::EC2::Subnet::Id
+  ALBSecurityGroup:
+    Description: Security Group Id of the ALB to which the EC2 instance traffic will be allowed from
+    Type: AWS::EC2::SecurityGroup::Id    
+  WorkSpaceSecurityGroup:  
+    Description: Security Group Id of the workspace to which the EC2 instance traffic will be allowed from
+    Type: AWS::EC2::SecurityGroup::Id 
+  EnvironmentInstanceFiles:
+    Type: String
+    Description: >-
+      An S3 URI (starting with "s3://") that specifies the location of files to be copied to
+      the environment instance, including any bootstrap scripts
+
+  InstanceType:
+    Description: Choose the instance type e.g t3.medium (2vCPU , 2GiB RAM), t3.large (2vCPU, 8GiB RAM), t3.xlarge(4vCPU, 16GiB RAM)
+    Type: String
+    Default: t3.medium
+    AllowedValues:
+      [
+        t3.medium,
+        t3.large,
+        t3.xlarge,
+      
+      ]
+    ConstraintDescription: must be a valid EC2 instance type.
+  EBSVolumeSize:
+    Description: The initial size of the volume (in GBs)  EBS will use for storage.
+    Type: Number
+    Default: 32
+
+Conditions:
+  IamPolicyEmpty: !Equals [!Ref IamPolicyDocument, '{}']
+
+Resources:
+
+  SSMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join ["-", [Ref: Namespace, "SSM-Policy"]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - ssm:*
+            Resource: "*"
+
+  InstanceRolePermissionBoundary:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Permission boundary for EC2 instance role
+      ManagedPolicyName: !Join ['-', [Ref: Namespace, 'ec2-linux-permission-boundary']]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 's3:*'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'sts:*'
+            Resource: '*'          
+          - Effect: Allow
+            Action:
+              - 'kms:*'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ssm:*'
+            Resource: '*'
+          - Effect: Deny
+            NotAction:
+              - 's3:*'
+              - 'ssm:*'
+              - 'kms:*'
+              - 'sts:*'
+            NotResource: '*'   
+          
+
+  IAMRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Join ['-', [Ref: Namespace, 'ec2-role']]
+      Path: '/'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service:
+                - 'ec2.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - !If
+          - IamPolicyEmpty
+          - !Ref 'AWS::NoValue'
+          - PolicyName: !Join ['-', [Ref: Namespace, 's3-studydata-policy']]
+            PolicyDocument: !Ref IamPolicyDocument
+      ManagedPolicyArns:
+        - Ref: SSMPolicy
+      PermissionsBoundary: !Ref InstanceRolePermissionBoundary        
+
+  InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      InstanceProfileName: !Join ['-', [Ref: Namespace, 'ec2-profile']]
+      Path: '/'
+      Roles:
+        - Ref: IAMRole
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - config1
+        config1:
+          files:
+            "C:/Users/Administrator/s3_mount.txt":
+              content: !Sub |
+                ${S3Mounts}    
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: "PT15M"   
+    Properties:           
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>     
+          # Redirect stdout and stderr to a log file and the console
+          $scriptPath = "C:\Users\Administrator\log\user-data.log"
+          Start-Transcript -Path $scriptPath -Append  
+
+          echo "setting Administrator to Admin@123"
+          net user Administrator ${Password}
+
+          echo "setting user token for nice-dcv"
+          C:\Users\Administrator\set_user_token.bat  
+
+          echo "Creating files from config for mounting"
+          cfn-init.exe -v --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} --configsets default
+          
+          echo "signal cft to success/failure"
+          cfn-signal.exe -e $lastexitcode --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+          
+          # End the transcript (stop logging)
+          Stop-Transcript
+          </powershell>
+          <persist>true</persist>          
+          
+      InstanceType: !Ref 'InstanceType'
+      ImageId: ami-03cb188048b457a84
+      IamInstanceProfile: !Ref InstanceProfile
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908       
+            
+
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: !Ref EBSVolumeSize
+            Encrypted: true    
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'false'
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+            - !Ref WorkSpaceSecurityGroup
+          SubnetId: !Ref Subnet            
+      PropagateTagsToVolumeOnCreation: true
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: Business Operational
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: QA
+        - Key: ApplicationName
+          Value: ResearchGatewayQA
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908     
+        - Key: cost_resource
+          Value: !Sub ${AWS::StackName}
+        - Key: Name
+          Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]  
+      
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 workspace security group
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+          
+      SecurityGroupIngress:     
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443      
+          SourceSecurityGroupId: !Ref ALBSecurityGroup         
+      VpcId: !Ref VPC           
+
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref 'EC2Instance'
+ 
+  AvailabilityZone: 
+    Description: AvailabilityZone of newly created EC2 instance
+    Value: !GetAtt [EC2Instance, AvailabilityZone]  

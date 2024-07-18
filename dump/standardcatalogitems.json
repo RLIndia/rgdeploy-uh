@@ -163,6 +163,112 @@
         }
 },
 {
+        "_id": {
+          "$oid": "660504955135663522b880cfa"
+        },
+        "name" : "Windows Advanced Desktop for Secure Research",
+        "description" : "A secure research windows Advanced based environment intended to allow researchers to access sensitive data under a higher level of control and data protection.",
+        "fileName" : "ec2-advanced-winsecure-desktop.yml",
+        "tags" : [ 
+            {
+                "Key" : "EstimatedTimeToProvision",
+                "Value" : "10 Minutes"
+            }, 
+            {
+                "Key" : "DetailsLink",
+                "Value" : "https://researchgateway.readthedocs.io/en/latest/WindowsDesktopForSecureResearch.html"
+            }, 
+            {
+                "Key" : "Service",
+                "Value" : "EC2-SECURE-DESKTOP"
+            }, 
+            {
+                "Key" : "TypeOfProduct",
+                "Value" : "Secure"
+            }, 
+            {
+                "Key" : "ALB",
+                "Value" : "true"
+            }, 
+            {
+                "Key" : "ApplicationPort",
+                "Value" : "8443"
+            }, 
+            {
+                "Key" : "ApplicationProtocol",
+                "Value" : "HTTPS"
+            }
+        ],
+        "owner" : "RL",
+        "portfolio" : "RGPortfolio",
+        "availableRegions" : [],
+        "assignedOU" : [],
+        "metaData" : {
+            "pre_provisioning" : [ 
+                {
+                    "code" : "CFT_PARAMS",
+                    "params" : [ 
+                        {
+                            "name" : "EnvironmentInstanceFiles",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "IamPolicyDocument",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "ALBSecurityGroup",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "S3Mounts",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "WorkSpaceSecurityGroup",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "Subnet",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "VPC",
+                            "type" : "RL::SC::PARAM::HD"
+                        }, 
+                        {
+                            "name" : "Namespace",
+                            "type" : "RL::SC::PARAM::HD"
+                        }
+                    ]
+                }
+            ],
+            "post_provisioning" : [],
+            "checks_before_assigning_product" : [ 
+                {
+                    "Key" : "Secure",
+                    "Value" : true
+                }, 
+                {
+                    "code" : "AMI_ID_REQUIRED",
+                    "is_ami_required" : true,
+                    "ami_id_list" : [ 
+                        {
+                            "us-east-2" : "ami-08ff5d8cce7cb8abd"
+                        }
+                        
+                        
+                    ],
+                    "ami_path" : "/RL/RG/StandardCatalog/windows-nice-dcv-ami"
+                }
+            ],
+            "checks_after_assigning_product" : [],
+            "permission_required" : {},
+            "cost_resource" : true
+        }
+},
+
+{
   "_id": {
     "$oid": "60504955135663522b880dce"
   },
