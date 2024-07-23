@@ -183,7 +183,8 @@ Resources:
     Properties:
         LaunchTemplateName: IMDSV2
         LaunchTemplateData:
-          MetadataOptions:
+          DisableApiTermination: true
+          MetadataOptions: 
             HttpTokens: required
             HttpPutResponseHopLimit: 2
   RGEC2Instance:
