@@ -45,12 +45,12 @@ Resources:
       - IpProtocol: tcp
         FromPort: 80
         ToPort: 80
-        CidrIp: 172.16.0.0/12
-      - IpProtocol: tcp        
+        CidrIp: 172.16.0.0/12        
       - IpProtocol: tcp
         FromPort: 443
         ToPort: 443
         CidrIp: 10.0.0.0/8
+      - IpProtocol: tcp
         FromPort: 443
         ToPort: 443
         CidrIp: 172.16.0.0/12     
