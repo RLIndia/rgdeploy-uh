@@ -46,7 +46,7 @@ Parameters:
   EBSVolumeSize:
     Description: The initial size of the volume (in GBs)  EBS will use for storage.
     Type: Number
-    Default: 32
+    Default: 64
 
 Conditions:
   IamPolicyEmpty: !Equals [!Ref IamPolicyDocument, "{}"]
@@ -369,6 +369,9 @@ Resources:
               cwd: "/home/ec2-user" 
               command: "/home/ec2-user/start_jupyter.sh" 
     Properties:
+      LaunchTemplate:
+        LaunchTemplateName: "RG-IMDSv2"
+        Version: 1      
       UserData:
         Fn::Base64: !Sub |
           #!/usr/bin/env bash
@@ -475,31 +478,7 @@ Resources:
             - !Ref WorkSpaceSecurityGroup
           SubnetId: !Ref Subnet            
       PropagateTagsToVolumeOnCreation: true
-      Tags:
-        - Key: CostCenter
-          Value: PG000000
-        - Key: CriticalityTier
-          Value: Business Operational
-        - Key: Compliance
-          Value: HIPAA
-        - Key: Environment
-          Value: QA
-        - Key: ApplicationName
-          Value: ResearchGatewayQA
-        - Key: Department
-          Value: DataScience
-        - Key: ApplicationCustodian
-          Value: txs908
-        - Key: ServiceNow
-          Value: XXX
-        - Key: DepartmentEmail
-          Value: txs908@miami.edu
-        - Key: UHITOwner
-          Value: txs908     
-        - Key: cost_resource
-          Value: !Sub ${AWS::StackName}
-        - Key: Name
-          Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]  
+
 
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
