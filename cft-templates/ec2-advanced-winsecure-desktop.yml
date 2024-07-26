@@ -1,7 +1,7 @@
 Metadata: 
   License: Apache-2.0
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS CloudFormation Template to create an GPU based EC2 windows instance with NICE DCV pre installed..'
+Description: 'AWS CloudFormation Template to create an GPU based EC2 Windows Advanced Desktop for Secure Research instance with NICE DCV pre installed..'
 Parameters:
 
   Namespace:
@@ -43,7 +43,8 @@ Parameters:
       [
         t3.medium,
         t3.large,
-        t3.xlarge
+        t3.xlarge,
+      
       ]
     ConstraintDescription: must be a valid EC2 instance type.
   EBSVolumeSize:
@@ -151,7 +152,7 @@ Resources:
     Properties:
       LaunchTemplate:
         LaunchTemplateName: "RG-IMDSv2"
-        Version: 1              
+        Version: 1             
       UserData:
         Fn::Base64: !Sub |
           <powershell>     
@@ -178,7 +179,7 @@ Resources:
           
       InstanceType: !Ref 'InstanceType'
       ImageId: ami-03cb188048b457a84
-      IamInstanceProfile: !Ref InstanceProfile
+      IamInstanceProfile: !Ref InstanceProfile     
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:

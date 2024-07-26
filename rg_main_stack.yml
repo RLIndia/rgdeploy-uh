@@ -13,15 +13,6 @@ Parameters:
     Type: String
     Default: ""
     ConstraintDescription: User password
-  AccessFromCidr:
-    Description: Lockdown SSH and HTTPS access (default can be accessed from anywhere)
-    Type: String
-    # Use specific IP addresses (Ex:192.168.1.5/32) for access from a known location.
-    Default: 192.168.1.0/24
-    MinLength: "9"
-    MaxLength: "18"
-    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
-    ConstraintDescription: must be a valid CIDR range of the form x.x.x.x/x.
   RGUrl:
     Description: URL at which this instance of Research Gateway can be reached. e.g. myrg.example.com
     Type: String
@@ -183,7 +174,8 @@ Resources:
     Properties:
         LaunchTemplateName: IMDSV2
         LaunchTemplateData:
-          MetadataOptions:
+          DisableApiTermination: true
+          MetadataOptions: 
             HttpTokens: required
             HttpPutResponseHopLimit: 2
   RGEC2Instance:

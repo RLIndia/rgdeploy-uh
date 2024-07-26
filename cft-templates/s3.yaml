@@ -1,62 +1,70 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: create a single S3 bucket
 
 Parameters:
   Namespace:
     Type: String
-    Description: An environment name that will be prefixed to resource names 
-  KMSKeyArn:
+    Description: An environment name that will be prefixed to resource names
+  AccessLoggingBucketName:
     Type: String
-    Description: "If having KMS Key ARN, Pass ARN"
-    Default: "Default"
-  SSEAlgorithm:
+    Description: "Pass the bucket name where Access Logs for this S3 bucket should be sent"
+    Default: ""
+  AccessLoggingBucketPrefix:
     Type: String
-    Description: "If KMS key ARN passed,select aws:kms Encryption algorithm"
-    Default: "AES256"
-    AllowedValues:
-      - aws:kms
-      - AES256
+    Description: "Pass the bucket prefix where Access Logs for this S3 bucket should be sent"
+    Default: "/"
 
 Conditions:
-  AES256: !Equals [!Ref SSEAlgorithm, "AES256"]   
+  AccessLoggingEnabled:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: AccessLoggingBucketName
+          - ""
 
 Resources:
   SampleBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Ref Namespace    
+      BucketName: !Ref Namespace
       Tags:
         - Key: cost_resource
           Value: !Sub ${AWS::StackName}
         - Key: Name
-          Value: !Sub ${Namespace} 
+          Value: !Sub ${Namespace}
+      LoggingConfiguration:
+        Fn::If:
+          - AccessLoggingEnabled
+          - DestinationBucketName: !Ref AccessLoggingBucketName
+            LogFilePrefix: !Ref AccessLoggingBucketPrefix
+          - !Ref "AWS::NoValue"
+
   BucketPolicy:
-    Type: 'AWS::S3::BucketPolicy'
+    Type: "AWS::S3::BucketPolicy"
     Properties:
-      Bucket: !Ref S3Bucket
+      Bucket: !Ref SampleBucket
       PolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Sid: EnforceTLS12
             Effect: Deny
-            Principal: '*'
-            Action: 's3:*'
-            Resource: 
-              - !Sub '${S3Bucket.Arn}'
-              - !Sub '${S3Bucket.Arn}/*'
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "${SampleBucket.Arn}"
+              - !Sub "${SampleBucket.Arn}/*"
             Condition:
               Bool:
-                'aws:SecureTransport': 'false'
+                "aws:SecureTransport": "false"
           - Sid: EnforceTLS12OrHigher
             Effect: Deny
-            Principal: '*'
-            Action: 's3:*'
-            Resource: 
-              - !Sub '${S3Bucket.Arn}'
-              - !Sub '${S3Bucket.Arn}/*'
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !Sub "${SampleBucket.Arn}"
+              - !Sub "${SampleBucket.Arn}/*"
             Condition:
               NumericLessThan:
-                's3:TLSVersion': '1.2'
+                "s3:TLSVersion": "1.2"
 
 Outputs:
   BucketArn:

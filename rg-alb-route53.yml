@@ -41,12 +41,19 @@ Resources:
       - IpProtocol: tcp
         FromPort: 80
         ToPort: 80
-        CidrIp: 0.0.0.0/0
+        CidrIp: 10.0.0.0/8
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 172.16.0.0/12        
       - IpProtocol: tcp
         FromPort: 443
         ToPort: 443
-        CidrIp: 0.0.0.0/0
-     
+        CidrIp: 10.0.0.0/8
+      - IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        CidrIp: 172.16.0.0/12     
     SecurityGroupEgress:  # Adding egress rule
         - IpProtocol: "-1"  # Allow all protocols
           CidrIp: 0.0.0.0/0  # Allow all outbound traffic to all destinations    
