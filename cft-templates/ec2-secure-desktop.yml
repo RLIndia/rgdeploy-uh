@@ -61,7 +61,9 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - ssm:*
+              - ssm:GetParameter
+              - ssm:PutParameter
+              - ssm:DescribeParameters
             Resource: "*"
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
@@ -87,6 +89,14 @@ Resources:
             Action:
               - 'ssm:*'
             Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ssmmessages:*'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ec2messages:*'
+            Resource: '*'            
           - Effect: Deny
             NotAction:
               - 's3:*'
@@ -117,7 +127,8 @@ Resources:
           - PolicyName: !Join ['-', [Ref: Namespace, 's3-studydata-policy']]
             PolicyDocument: !Ref IamPolicyDocument
       ManagedPolicyArns:
-        - Ref: SSMPolicy            
+        - Ref: SSMPolicy 
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore        
       PermissionsBoundary: !Ref InstanceRolePermissionBoundary
 
 
@@ -191,7 +202,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 url="http://localhost:8787/"
                 link_name="RStudio"
@@ -210,7 +221,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 
                 sleep 2
@@ -285,11 +296,20 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
-                # trap '/opt/aws/bin/cfn-signal --exit-code 1 --resource EC2Instance --region ${AWS::Region} --stack ${AWS::StackName}' ERR
-                region=$(curl -s "http://169.254.169.254/latest/meta-data/placement/region")
-                instance_id=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
+                trap "Error setting user token. You may not be able to access your instance URL"  ERR
+                # Get the session token
+                TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+                
+                # Get the region to build the parameter name
+                region=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+                echo "Retrieved region ${region} from metadata service"
+                
+                # Get the instance id to build the parameter name
+                instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+                echo "Retrieved instance_id $instance_id from metadata service"
+                
                 session_id="rg-session"
                 auth_token=`uuidgen`
                 parameter_name="/RL/RG/secure-desktop/auth-token/$instance_id"
@@ -320,7 +340,7 @@ Resources:
                 serverurl=unix:///home/ec2-user/supervisor/supervisor.sock ; use a unix:// URL  for a unix socket
 
                 [program:dcv-custom-auth]
-                command=docker run --rm -p 8445:8445 -e PORT=8445 -e PARAMNAMEPREFIX=/RL/RG/secure-desktop/auth-token/ relevancelab/nice-dcv-auth-svc:1.0.0  ; the program (relative uses PATH, can take args)
+                command=docker run --rm -p 8445:8445 -e PORT=8445 -e PARAMNAMEPREFIX=/RL/RG/secure-desktop/auth-token/ relevancelab/nice-dcv-auth-svc:latest ; the program (relative uses PATH, can take args)
                 directory=/home/ec2-user                                                                                                            ; directory to cwd to before exec (def no cwd)
                 user=ec2-user                                                                                                                       ; setuid to this UNIX account to run the program
                 redirect_stderr=true                                                                                                                ; redirect proc stderr to stdout (default false)
@@ -439,7 +459,7 @@ Resources:
 
       InstanceType: !Ref "InstanceType"
       
-      ImageId: "ami-0db574d6cf5ed861f"
+      ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/linux-nice-dcv-ami}}"
       IamInstanceProfile: !Ref InstanceProfile
       Tags:
         - Key: CostCenter
@@ -462,7 +482,14 @@ Resources:
           Value: txs908@miami.edu
         - Key: UHITOwner
           Value: txs908       
-      
+        - Key: Name
+          Value: !Join ['-', [Ref: Namespace, 'ec2-linux']]
+        - Key: Description
+          Value: EC2 Secure Workspace Linux instance
+        - Key: cost_resource
+          Value: !Sub ${AWS::StackName}      
+        - Key: PatchGroup
+          Value: RG-PatchGroup-Linux
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
           Ebs:

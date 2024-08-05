@@ -65,7 +65,9 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - ssm:*
+              - ssm:PutParameter
+              - ssm:GetParameter
+              - ssm:DescribeParameters
             Resource: "*"
 
   InstanceRolePermissionBoundary:
@@ -92,6 +94,14 @@ Resources:
             Action:
               - 'ssm:*'
             Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ssmmessages:*'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ec2messages:*'
+            Resource: '*'            
           - Effect: Deny
             NotAction:
               - 's3:*'
@@ -123,6 +133,7 @@ Resources:
             PolicyDocument: !Ref IamPolicyDocument
       ManagedPolicyArns:
         - Ref: SSMPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       PermissionsBoundary: !Ref InstanceRolePermissionBoundary        
 
   InstanceProfile:
@@ -177,7 +188,7 @@ Resources:
           <persist>true</persist>          
           
       InstanceType: !Ref 'InstanceType'
-      ImageId: ami-03cb188048b457a84
+      ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/windows-nice-dcv-ami}}"
       IamInstanceProfile: !Ref InstanceProfile
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
@@ -217,7 +228,8 @@ Resources:
           Value: !Sub ${AWS::StackName}
         - Key: Name
           Value: !Join ["-", [Ref: Namespace, "ec2-linux"]]  
-      
+         - Key: PatchGroup
+          Value: RG-PatchGroup-Windows     
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
