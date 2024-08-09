@@ -89,6 +89,14 @@ Resources:
             Action:
               - 'ssm:*'
             Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ssmmessages:*'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'ec2messages:*'
+            Resource: '*'
           - Effect: Deny
             NotAction:
               - 's3:*'
@@ -119,7 +127,8 @@ Resources:
           - PolicyName: !Join ['-', [Ref: Namespace, 's3-studydata-policy']]
             PolicyDocument: !Ref IamPolicyDocument
       ManagedPolicyArns:
-        - Ref: SSMPolicy            
+        - Ref: SSMPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       PermissionsBoundary: !Ref InstanceRolePermissionBoundary
 
 
@@ -193,7 +202,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 url="http://localhost:8787/"
                 link_name="RStudio"
@@ -212,7 +221,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 
                 sleep 2
@@ -241,7 +250,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/sh
                 set -x
                 # Adding sleep to avoid mounting failure
@@ -251,7 +260,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 service_name="jupyterlab"
                 timeout=20
@@ -278,7 +287,7 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 set -x
                 sleep 30
@@ -289,14 +298,17 @@ Resources:
               group: "ec2-user"
               content: !Sub |
                 #!/bin/bash
-                # trap '/opt/aws/bin/cfn-signal --exit-code 1 --resource EC2Instance --region ${AWS::Region} --stack ${AWS::StackName}' ERR
-                region=$(curl -s "http://169.254.169.254/latest/meta-data/placement/region")
-                instance_id=$(curl -s "http://169.254.169.254/latest/meta-data/instance-id")
-                session_id="rg-session"
-                auth_token=`uuidgen`
-                parameter_name="/RL/RG/secure-desktop/auth-token/$instance_id"
-                aws ssm put-parameter --name "$parameter_name" --type "String" --value '{"auth_token":"'$auth_token'","session_id":"'$session_id'"}' --region $region --overwrite
-                echo "User token set successfully"
+                trap "Error setting user token. You may not be able to access your instance URL"  ERR
+                # Get the session token
+                TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+                
+                # Get the region to build the parameter name
+                region=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
+                echo "Retrieved region ${region} from metadata service"
+                
+                # Get the instance id to build the parameter name
+                instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+                echo "Retrieved instance_id $instance_id from metadata service"
             "/home/ec2-user/supervisor/supervisord.conf":
               mode: "000644"
               owner: "ec2-user"
@@ -322,7 +334,7 @@ Resources:
                 serverurl=unix:///home/ec2-user/supervisor/supervisor.sock ; use a unix:// URL  for a unix socket
 
                 [program:dcv-custom-auth]
-                command=docker run --rm -p 8445:8445 -e PORT=8445 -e PARAMNAMEPREFIX=/RL/RG/secure-desktop/auth-token/ relevancelab/nice-dcv-auth-svc:1.0.0  ; the program (relative uses PATH, can take args)
+                command=docker run --rm -p 8445:8445 -e PORT=8445 -e PARAMNAMEPREFIX=/RL/RG/secure-desktop/auth-token/ relevancelab/nice-dcv-auth-svc:latest  ; the program (relative uses PATH, can take args)
                 directory=/home/ec2-user                                                                                                            ; directory to cwd to before exec (def no cwd)
                 user=ec2-user                                                                                                                       ; setuid to this UNIX account to run the program
                 redirect_stderr=true                                                                                                                ; redirect proc stderr to stdout (default false)
@@ -367,8 +379,17 @@ Resources:
         Fn::Base64: !Sub |
           #!/usr/bin/env bash
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-          # trap '/opt/aws/bin/cfn-signal --exit-code 1 --resource EC2Instance --region ${AWS::Region} --stack ${AWS::StackName}' ERR
-          
+          #trap '/opt/aws/bin/cfn-signal --exit-code 1 --resource EC2Instance --region ${AWS::Region} --stack ${AWS::StackName}' ERR
+          yum update -y
+          # Download and install the SSM Agent
+          yum install -y "https://s3.${AWS::Region}.amazonaws.com/amazon-ssm-region/latest/linux_amd64/amazon-ssm-agent.rpm"
+
+          # Start and enable the SSM Agent
+          systemctl start amazon-ssm-agent
+          systemctl enable amazon-ssm-agent
+
+          # Check if the SSM Agent is running (for logging purposes)
+          systemctl status amazon-ssm-agent          
           # Copy environment instance files needed for the workspace
           aws s3 cp --region "${AWS::Region}" "${EnvironmentInstanceFiles}/secure_desktop/secure_desktop.perm" "/etc/dcv/"
           aws s3 cp --region "${AWS::Region}" "${EnvironmentInstanceFiles}/get_bootstrap_rhel.sh" "/tmp"
@@ -470,6 +491,8 @@ Resources:
           Value: EC2 workspace instance
         - Key: cost_resource
           Value: !Sub ${AWS::StackName}
+        - Key: PatchGroup
+          Value: RG-PatchGroup-RHEL      
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:

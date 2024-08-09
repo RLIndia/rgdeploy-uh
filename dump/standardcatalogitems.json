@@ -36,6 +36,10 @@
                                         {
                                                 "name" : "Namespace",
                                                 "type" : "RL::SC::PARAM::HD"
+                                        },
+                                        {
+                                                "name" : "AccessLoggingBucketName",
+                                                "type" : "RL::SC::PARAM::HD"
                                         }
                                 ]
                         }

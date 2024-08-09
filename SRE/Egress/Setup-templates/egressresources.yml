@@ -8,12 +8,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Provision all the required resources for TRE Egress application setup in RG.
 Parameters:
-  EgressAppAccount:
-    Type: String
-    Description: Account number which is hosting the Egress Add-On Application
-    MinLength: 12
-    MaxLength: 12
-    AllowedPattern: "[0-9]+"
   RGDomain:
     Type: String
     Description: RG Domain that will access the Egress Store
@@ -86,34 +80,6 @@ Resources:
               ArnLike:
                 "aws:SourceArn":
                   - !GetAtt EgressNotificationBucket.Arn
-              StringEquals:
-                "aws:SourceAccount":
-                  - !Sub "${AWS::AccountId}"
-          - Sid: S3ServerAccessLogsPolicy-TREAnalystResultsBucket
-            Action:
-              - "s3:PutObject"
-            Effect: Allow
-            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-tre-analyst-results-bucket*"
-            Principal:
-              Service: logging.s3.amazonaws.com
-            Condition:
-              ArnLike:
-                "aws:SourceArn":
-                  - !GetAtt TREAnalystResultsBucket.Arn
-              StringEquals:
-                "aws:SourceAccount":
-                  - !Sub "${AWS::AccountId}"
-          - Sid: S3ServerAccessLogsPolicy-TRELakeAdminResultsBucket
-            Action:
-              - "s3:PutObject"
-            Effect: Allow
-            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/logs-tre-lake-admin-results-bucket*"
-            Principal:
-              Service: logging.s3.amazonaws.com
-            Condition:
-              ArnLike:
-                "aws:SourceArn":
-                  - !GetAtt TRELakeAdminResultsBucket.Arn
               StringEquals:
                 "aws:SourceAccount":
                   - !Sub "${AWS::AccountId}"
@@ -303,11 +269,4 @@ Resources:
             Condition:
               StringNotEquals:
                 s3:signatureversion: "AWS4-HMAC-SHA256"
-  #SNS topic is created as part of this stack but Subscriptions would happen from egress stack
-  EgressNotificationTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      DisplayName: "rg-EgressTopicTest"
-      KmsMasterKeyId: !Ref EgressStoreEncryptionKey
-      TopicName: "EgressTopicTest"
-  #Egress Store dynamoDB
+

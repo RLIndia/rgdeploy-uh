@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Research Gateway Amazon Linux 2 Patch Baseline'
+
+Resources:
+  rgAmazonRHELPatchline:
+    Type: AWS::SSM::PatchBaseline
+    Properties:
+      Name: rg-AWS-RedHatPatchBaseline
+      Description: Patch Baseline for Research Gateway(RG) Redhat Enterprise Linux Provided by AWS.
+      OperatingSystem: REDHAT_ENTERPRISE_LINUX
+      PatchGroups:
+      - RG-PatchGroup-RHEL
+      ApprovalRules:
+        PatchRules:
+        - PatchFilterGroup:
+            PatchFilters:
+            - Key: PRODUCT
+              Values:
+              - RedhatEnterpriseLinux9.4          
+            - Key: SEVERITY
+              Values:
+              - Critical
+              - Important
+            - Key: CLASSIFICATION
+              Values:
+              - Security
+              - Recommended
+              - Bugfix             
+          ApproveAfterDays: 7
+          ComplianceLevel: CRITICAL

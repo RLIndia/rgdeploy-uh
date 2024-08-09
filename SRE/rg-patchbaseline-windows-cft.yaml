@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for Research Gateway Amazon Windows Patch Baseline'
+
+Resources:
+  rgAmazonWindowsPatchline:
+    Type: AWS::SSM::PatchBaseline
+    Properties:
+      Name: rg-AWS-WindowsPatchBaseline
+      Description: Patch Baseline for Research Gateway(RG) WindowsS Provided by AWS.
+      OperatingSystem: WINDOWS
+      PatchGroups:
+      - RG-PatchGroup-Windows
+      ApprovalRules:
+        PatchRules:
+        - PatchFilterGroup:
+            PatchFilters:
+            - Key: PRODUCT
+              Values:
+              -  WindowsServer2022
+            - Key: MSRC_SEVERITY
+              Values:
+              - Critical
+              - Important
+            - Key: CLASSIFICATION
+              Values:
+              - SecurityUpdates
+              - CriticalUpdates          
+          ApproveAfterDays: 7
+          ComplianceLevel: CRITICAL
+
+  

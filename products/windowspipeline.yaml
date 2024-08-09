@@ -1,0 +1,271 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Creates the ImageBuilder component, recipe, infra configuration, distribution configuration, and pipeline for SREWindows for Research Gateway
+Parameters:
+  SourceBucketName:
+    Type: String
+    Default: rgqa-sec-templatebucket
+  VPCId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  # MasterAMI:
+  #   Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+  #   Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  # Replace AMI-ID with ami-0f496107db66676ff for us-east-1 region,ami-0caa6784ed30b62c4 for us-east-2
+  MasterAMI:
+    Type: "String"
+    Default: ami-0f496107db66676ff  
+  Ver:
+    Type: String
+    Default: "1.0.0"
+Resources:
+  ############
+  # COMPONENTS
+  ############
+  ComponentConfigureOS:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "${AWS::StackName}-ConfigureOSComponent"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Configure Operating System Patches"
+      Tags:
+        Name: !Join ["-", [!Ref AWS::StackName, "ConfigureOS"]]
+        ResourceType: "RLCatalyst-Research-Gateway"
+      Data: |
+        name: ConfigureOS
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: UpdateOS
+                action: UpdateOS
+  ComponentSREWindows:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "${AWS::StackName}-ComponentSREWindows"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Configure SREWindows"
+      Tags:
+        Name: !Join ["-", [!Ref AWS::StackName, "ConfigureSREWindows"]]
+        ResourceType: "RLCatalyst-Research-Gateway"
+      Data: !Sub |
+        name: SREWindows-Provisioner
+        description: This is the provisioner for SREWindows for Research Gateway
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: AddFiles
+                action: S3Download
+                inputs:
+                - source: s3://${SourceBucketName}/ec2-secure-windows.zip
+                  destination: C:/Users/Administrator/ec2-secure-windows.zip
+              - name: ExtractFiles
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Extracting ec2-secure-windows.zip..."
+                    - Expand-Archive -Path "C:\Users\Administrator\ec2-secure-windows.zip" -DestinationPath "C:\Users\Administrator" 
+              - name: InstallPython
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Provisioning Started..."
+                    - echo "Write-Host Downloading python..."
+                    - $pythonURL = "https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe"
+                    - Invoke-WebRequest -Uri $pythonURL -OutFile "C:\\Users\\Administrator\\python-3.12.3-amd64.exe"
+                    - echo "Installing python..."
+                    - Start-Process -FilePath 'C:\\Users\\Administrator\\python-3.12.3-amd64.exe' -ArgumentList '/quiet', 'InstallAllUsers=1', 'PrependPath=1' -Wait
+              - name: ExecuteProvisioner
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - C:/Users/Administrator/provision-windows.ps1
+                    
+                    - echo "removing archive ec2-secure-windows.zip"
+                    - Remove-Item 'C:/Users/Administrator/ec2-secure-windows.zip'
+                    - echo "removing default.perm"
+                    - Remove-Item 'C:/Users/Administrator/default.perm'
+
+              - name: ChangeAMIPassword
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Changing windows password..."
+                    - net user Administrator Admin@123
+                    - echo "Windows password changed successfully"
+
+
+
+  #############
+  # RECIPE
+  #############
+  SREWindowsImageRecipe:
+    Type: "AWS::ImageBuilder::ImageRecipe"
+    Properties:
+      Name: !Sub "${AWS::StackName}-SREWindowsImageRecipe"
+      Version: !Ref Ver
+      ParentImage: !Ref MasterAMI
+      Description: !Sub "${AWS::StackName}-SREWindowsImageRecipe"
+      Components:
+        - ComponentArn: !GetAtt ComponentConfigureOS.Arn
+        - ComponentArn: !GetAtt ComponentSREWindows.Arn
+      Tags:
+        Name: !Join ["-", [!Ref AWS::StackName, "SREWindowsImageRecipe"]]
+        ResourceType: "RLCatalyst-Research-Gateway"
+      WorkingDirectory: C:\Users\Administrator
+      AdditionalInstanceConfiguration: 
+        UserDataOverride: 
+          Fn::Base64: !Sub |
+            <powershell>
+            # Set administrator password
+            net user Administrator SuperS3cr3t!
+            wmic useraccount where "name='Administrator'" set PasswordExpires=FALSE
+
+            # 1) Enable Remote Desktop
+            reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v "fDenyTSConnections" /t REG_DWORD /d 0 /f
+
+            # 2) Allow incoming RDP on firewall
+            # Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+            netsh advfirewall firewall set rule group="Remote Desktop" new enable=yes
+
+            # 3) Enable secure RDP authentication
+            # set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 0   
+            reg add "HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v "UserAuthentication" /t REG_DWORD /d 0 /f
+
+
+            # First, make sure WinRM can't be connected to
+            netsh advfirewall firewall set rule name="Windows Remote Management (HTTP-In)" new enable=yes action=block
+
+            # Delete any existing WinRM listeners
+            winrm delete winrm/config/listener?Address=*+Transport=HTTP  2>$Null
+            winrm delete winrm/config/listener?Address=*+Transport=HTTPS 2>$Null
+
+            # Create a new WinRM listener and configure
+            winrm create winrm/config/listener?Address=*+Transport=HTTP
+            winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="0"}'
+            winrm set winrm/config '@{MaxTimeoutms="7200000"}'
+            winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+            winrm set winrm/config/service '@{MaxConcurrentOperationsPerUser="12000"}'
+            winrm set winrm/config/service/auth '@{Basic="true"}'
+            winrm set winrm/config/client/auth '@{Basic="true"}'
+            #configure MaxEnvelopeSizekb
+            winrm set winrm/config @{MaxEnvelopeSizekb="125167617"}
+
+            # Configure UAC to allow privilege elevation in remote shells
+            $Key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
+            $Setting = 'LocalAccountTokenFilterPolicy'
+            Set-ItemProperty -Path $Key -Name $Setting -Value 1 -Force
+
+            # Configure and restart the WinRM Service; Enable the required firewall exception
+            Stop-Service -Name WinRM
+            Set-Service -Name WinRM -StartupType Automatic
+            netsh advfirewall firewall set rule name="Windows Remote Management (HTTP-In)" new action=allow localip=any remoteip=any
+            Start-Service -Name WinRM
+            </powershell>
+
+
+  SREWindowsInfraConfig:
+    Type: "AWS::ImageBuilder::InfrastructureConfiguration"
+    Properties:
+      Name: !Sub "${AWS::StackName}-SREWindows-InfraConfig"
+      InstanceProfileName: !Ref ResearchGatewayImgBldrInstancePfl
+      InstanceTypes:
+        - "m5.large"
+      TerminateInstanceOnFailure: True
+      SecurityGroupIds:
+        - !Ref ResearchGatewayImgBldrInstanceSG
+      SubnetId: !Ref PrivateSubnetId
+      Logging:
+        S3Logs:
+          S3BucketName: !Ref SourceBucketName
+          S3KeyPrefix: !Join ["/", ["Logs", "RL_RG_SREWindows", !Ref Ver]]
+      Tags:
+        Name: !Join ["-", [!Ref AWS::StackName, "SREWindowsInfraConfig"]]
+        ResourceType: "RLCatalyst-Research-Gateway"        
+
+  ResearchGatewayImgBldrInstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access and HTTP from the load balancer only
+      VpcId: !Ref VPCId
+      Tags:
+        - Key: Name
+          Value:
+            !Join ["-", [!Ref AWS::StackName, "BuildAMIInstanceSecurityGroup"]]
+        - Key: ResourceType
+          Value: "RLCatalyst-Research-Gateway"
+
+  ResearchGatewayImgBldrInstancePfl:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref ResearchGatewayInstanceRole
+
+  ResearchGatewayInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilder
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: [ec2.amazonaws.com]
+            Action:
+              - sts:AssumeRole
+      Path: /        
+
+  ###############
+  # DISTRIBUTION
+  ###############      
+
+  SREWindowsDistributionConfiguration:
+    Type: "AWS::ImageBuilder::DistributionConfiguration"
+    Properties:
+      Name: !Sub "${AWS::StackName}-SREWindowsDistributionConfig"
+      Description: "SREWindows for RLCatalyst Research Gateway"
+      Distributions:
+        
+        - Region: "us-east-1"
+          AmiDistributionConfiguration:
+            Name: "SREWindows {{ imagebuilder:buildDate }}"
+            Description: "SREWindows for RLCatalyst Research Gateway"
+            AmiTags:
+              RLCatalystProduct: "SREWindows"
+        
+      Tags:
+        Name: "SREWindows"
+        RLCatalystProduct: "SREWindows"
+
+
+  SREWindowsImagePipeline:
+    Type: "AWS::ImageBuilder::ImagePipeline"
+    Properties:
+      Name: !Sub "${AWS::StackName}-Pipeline_SREWindows"
+      Description: "Pipeline to build SREWindows AMI for RLCatalyst Research Gateway"
+      ImageRecipeArn: !Ref SREWindowsImageRecipe
+      InfrastructureConfigurationArn: !Ref SREWindowsInfraConfig
+      DistributionConfigurationArn: !Ref SREWindowsDistributionConfiguration
+      ImageTestsConfiguration:
+        ImageTestsEnabled: false
+        TimeoutMinutes: 90
+      Status: "ENABLED"
+      Tags:
+        Name: "RL_RG_SREWindows"
+        ResourceType: "RLCatalyst-Research-Gateway"
+
+
+Outputs:
+  SREWindowsImagePipeline:
+    Description: SREWindows Image Builder Pipeline
+    Value: !Ref SREWindowsImagePipeline
+    Export:
+      Name: !Sub "${AWS::StackName}-SREWindowsPipelineName"
