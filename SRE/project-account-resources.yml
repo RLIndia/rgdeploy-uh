@@ -8,7 +8,7 @@ Resources:
       LaunchTemplateData:
         MetadataOptions:
           HttpEndpoint: enabled
-          HttpPutResponseHopLimit: 1
+          HttpPutResponseHopLimit: 2
           HttpTokens: required
 
   ProjectAccountAccessLogsBucketKMSKey:

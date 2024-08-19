@@ -1,23 +1,27 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: Creates the ImageBuilder component, recipe, infra configuration, distribution configuration, and pipeline for SREWindows for Research Gateway
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates the ImageBuilder component, recipe, infra configuration, distribution configuration, and pipeline for SREWindows for Research Gateway'
 Parameters:
   SourceBucketName:
     Type: String
-    Default: rgqa-sec-templatebucket
+    Default: uh-rg-prod-imagebuilder
+    Description: 'The S3 bucket name where the source files are located'
   VPCId:
     Type: AWS::EC2::VPC::Id
   PrivateSubnetId:
     Type: AWS::EC2::Subnet::Id
-  # MasterAMI:
-  #   Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
-  #   Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
-  # Replace AMI-ID with ami-0f496107db66676ff for us-east-1 region,ami-0caa6784ed30b62c4 for us-east-2
   MasterAMI:
-    Type: "String"
-    Default: ami-0f496107db66676ff  
+    Type: String
+    Default: ami-06118ec31766655f0
   Ver:
     Type: String
     Default: "1.0.0"
+  Environment:
+    Type: String
+    Default: QA
+    Description: 'The environment to be tagged: QA or Prod'
+    AllowedValues:
+      - QA
+      - PROD  
 Resources:
   ############
   # COMPONENTS
@@ -25,14 +29,23 @@ Resources:
   ComponentConfigureOS:
     Type: "AWS::ImageBuilder::Component"
     Properties:
-      Name: !Sub "${AWS::StackName}-ConfigureOSComponent"
+      Name: !Sub "ConfigureOSComponent-${AWS::StackName}"
       Platform: "Windows"
       SupportedOsVersions: ["Microsoft Windows Server 2022"]
       Version: !Ref Ver
       Description: "Configure Operating System Patches"
       Tags:
-        Name: !Join ["-", [!Ref AWS::StackName, "ConfigureOS"]]
-        ResourceType: "RLCatalyst-Research-Gateway"
+        Name: !Join ["-", ["ComponentConfigureOS", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
       Data: |
         name: ConfigureOS
         schemaVersion: 1.0
@@ -44,16 +57,25 @@ Resources:
   ComponentSREWindows:
     Type: "AWS::ImageBuilder::Component"
     Properties:
-      Name: !Sub "${AWS::StackName}-ComponentSREWindows"
+      Name: !Sub "ComponentSREWindows-${AWS::StackName}"
       Platform: "Windows"
       SupportedOsVersions: ["Microsoft Windows Server 2022"]
       Version: !Ref Ver
       Description: "Configure SREWindows"
       Tags:
-        Name: !Join ["-", [!Ref AWS::StackName, "ConfigureSREWindows"]]
-        ResourceType: "RLCatalyst-Research-Gateway"
+        Name: !Join ["-", ["ConfigureSREWindows", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
       Data: !Sub |
-        name: SREWindows-Provisioner
+        name: ComponentSREWindows
         description: This is the provisioner for SREWindows for Research Gateway
         schemaVersion: 1.0
         phases:
@@ -64,60 +86,302 @@ Resources:
                 inputs:
                 - source: s3://${SourceBucketName}/ec2-secure-windows.zip
                   destination: C:/Users/Administrator/ec2-secure-windows.zip
+                  overwrite: true
               - name: ExtractFiles
                 action: ExecutePowerShell
                 inputs:
                   commands:
                     - echo "Extracting ec2-secure-windows.zip..."
-                    - Expand-Archive -Path "C:\Users\Administrator\ec2-secure-windows.zip" -DestinationPath "C:\Users\Administrator" 
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\ec2-secure-windows.zip" -DestinationPath "C:\\Program Files\\ResearchGateway" 
               - name: InstallPython
                 action: ExecutePowerShell
                 inputs:
                   commands:
-                    - echo "Provisioning Started..."
-                    - echo "Write-Host Downloading python..."
+                    - echo "Downloading python..."
                     - $pythonURL = "https://www.python.org/ftp/python/3.12.3/python-3.12.3-amd64.exe"
                     - Invoke-WebRequest -Uri $pythonURL -OutFile "C:\\Users\\Administrator\\python-3.12.3-amd64.exe"
                     - echo "Installing python..."
                     - Start-Process -FilePath 'C:\\Users\\Administrator\\python-3.12.3-amd64.exe' -ArgumentList '/quiet', 'InstallAllUsers=1', 'PrependPath=1' -Wait
+                    - Remove-Item -Path "C:\\Users\\Administrator\\python-3.12.3-amd64.exe" -Force
               - name: ExecuteProvisioner
                 action: ExecutePowerShell
                 inputs:
                   commands:
-                    - C:/Users/Administrator/provision-windows.ps1
-                    
-                    - echo "removing archive ec2-secure-windows.zip"
+                    - Copy-Item -Path "C:\\Program Files\\ResearchGateway\\provision-windows.ps1" -Destination "C:\\Users\\Administrator\\provision-windows.ps1"
+                    - "C:\\Users\\Administrator\\provision-windows.ps1"
+                    - echo "Removing archive ec2-secure-windows.zip"
                     - Remove-Item 'C:/Users/Administrator/ec2-secure-windows.zip'
-                    - echo "removing default.perm"
-                    - Remove-Item 'C:/Users/Administrator/default.perm'
-
               - name: ChangeAMIPassword
                 action: ExecutePowerShell
                 inputs:
                   commands:
                     - echo "Changing windows password..."
                     - net user Administrator Admin@123
-                    - echo "Windows password changed successfully"
-
-
-
-  #############
+                    - echo "Windows password changed successfully"  
+  ComponentTanium:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "ComponentTanium-${AWS::StackName}"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Install Tanium Client"
+      Tags:
+        Name: !Join ["-", ["InstallTanium", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+      Data: !Sub |
+        schemaVersion: 1.0
+        name: ComponentTanium
+        description: This component installs Tanium Client on Windows
+        phases:
+          - name: build
+            steps:
+              - name: DownloadInstallerZip
+                action: S3Download
+                inputs:
+                  - source: s3://${SourceBucketName}/TaniumClient_7.6.4.2033.zip
+                    destination: C:\\Users\\Administrator\\TaniumClient_7.6.4.2033.zip
+              - name: ExtractInstaller
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Extracting TaniumClient_7.6.4.2033..."
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033.zip" -DestinationPath "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033" -Force
+              - name: InstallApp
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - $installerPath = "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033\\SetupClient.exe"
+                    - $installerBatPath = "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033\\install.bat"
+                    - if ((Test-Path -Path "$installerPath") -and (Test-Path -Path "$installerBatPath")){ Start-Process -FilePath "$installerBatPath" -Wait } else { echo "Installer not found at $installerPath or batch file not found at $installerBatPath"}
+                    - Remove-Item -Path "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033" -Force -Recurse
+                    - Remove-Item -Path "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033.zip" -Force 
+  ComponentCrowdStrike:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "ComponentCrowdStrike-${AWS::StackName}"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Install CrowdStrike Falcon 7.1 Agent"
+      Tags:
+        Name: !Join ["-", ["ComponentCrowdStrike", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+      Data: !Sub |
+        schemaVersion: 1.0
+        name: ComponentCrowdStrike
+        description: This component installs CrowdStrike Falcon 7.1 Agent on Windows
+        phases:
+          - name: build
+            steps:
+              - name: DownloadInstallerZip
+                action: S3Download
+                inputs:
+                  - source: s3://${SourceBucketName}/CrowdStrikeAgent.zip
+                    destination: C:\\Users\\Administrator\\CrowdStrikeAgent.zip
+              - name: ExtractInstaller
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Extracting CrowdStrike Falcon 7.1 Agent..."
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\CrowdStrikeAgent.zip" -DestinationPath "C:\\Users\\Administrator\\CrowdStrikeAgent" -Force
+              - name: InstallApp
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - $installerPath = "C:\\Users\\Administrator\\CrowdStrikeAgent\\WindowsSensor.MaverickGyr.exe"
+                    - $installerBatPath = "C:\\Users\\Administrator\\CrowdStrikeAgent\\TEST-UHIT-WIN-SERVER.bat"
+                    - if ((Test-Path $installerPath) -and (Test-Path $installerBatPath)){ Start-Process -FilePath "$installerBatPath" -Wait } else { echo "Installer not found at $installerPath or batch file not found at $installerBatPath" }
+                    - Remove-Item -Path "C:\\Users\\Administrator\\CrowdStrikeAgent" -Force -Recurse
+  ComponentNotepad:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "ComponentNotepad-${AWS::StackName}"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Install Notepad"
+      Tags:
+        Name: !Join ["-", ["ComponentNotepad", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+      Data: !Sub |
+        schemaVersion: 1.0
+        name: ComponentNotepad
+        description: This component installs Notepad
+        phases:
+          - name: build
+            steps:
+              - name: DownloadNotepad
+                action: S3Download
+                inputs:
+                  - source: s3://${SourceBucketName}/Notepadpp-v8.6.4.zip
+                    destination: C:\\Users\\Administrator\\Notepadpp-v8.6.4.zip
+              - name: ExtractNotepad
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Extracting Notepadpp-v8.6.4.zip..."
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\Notepadpp-v8.6.4.zip" -DestinationPath "C:\\Users\\Administrator\\Notepad++" -Force
+              - name: InstallNotepad
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - $installerPath = "C:\\Users\\Administrator\\Notepad++\\Notepadpp v8.6.4.msi"
+                    - if (Test-Path $installerPath) { Start-Process -FilePath "msiexec.exe" -ArgumentList "/i `"$installerPath`" /quiet /norestart" -Wait } else { echo "Installer not found at $installerPath" }
+  ComponentOffice365:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "ComponentOffice365-${AWS::StackName}"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Install Microsoft Office 365"
+      Tags:
+        Name: !Join ["-", ["ComponentOffice365", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+      Data: !Sub |
+        name: ComponentOffice365
+        description: This component installs Microsoft Office 365
+        schemaVersion: 1.0
+        phases:
+          - name: build
+            steps:
+              - name: DownloadOffice
+                action: S3Download
+                inputs:
+                  - source: s3://${SourceBucketName}/office365.zip
+                    destination: C:\\Users\\Administrator\\office365.zip
+              - name: ExtractOffice
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Extracting office365.zip..."
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\office365.zip" -DestinationPath "C:\\Users\\Administrator\\office365" -Force
+              - name: InstallOffice
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Installing Microsoft Office..."
+                    - Start-Process -FilePath "C:\\Users\\Administrator\\office365\\setup.exe" -ArgumentList "/configure C:\\Users\\Administrator\\office365\\Configuration.xml" -Wait
+  ComponentAdobeAcrobat:
+    Type: "AWS::ImageBuilder::Component"
+    Properties:
+      Name: !Sub "ComponentAdobeAcrobat-${AWS::StackName}"
+      Platform: "Windows"
+      SupportedOsVersions: ["Microsoft Windows Server 2022"]
+      Version: !Ref Ver
+      Description: "Install Adobe Acrobat"
+      Tags:
+        Name: !Join ["-", ["ComponentAdobeAcrobat", !Ref AWS::StackName]]
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+      Data: !Sub |
+        schemaVersion: 1.0
+        name: ComponentAdobeAcrobat
+        description: This component installs Adobe Acrobat
+        phases:
+          - name: build
+            steps:
+              - name: DownloadAcrobat
+                action: S3Download
+                inputs:
+                  - source: s3://${SourceBucketName}/Acrobat 24.1_en_US_WIN_64.zip
+                    destination: C:\\Users\\Administrator\\Acrobat_24.1_en_US_WIN_64.zip
+              - name: ExtractAcrobat
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Extracting Acrobat_24.1_en_US_WIN_64.zip..."
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\Acrobat_24.1_en_US_WIN_64.zip" -DestinationPath "C:\\Users\\Administrator\\Acrobat_24.1_en_US_WIN_64" -Force
+                    - Remove-Item -Path "C:\\Users\\Administrator\\Acrobat_24.1_en_US_WIN_64.zip" -Force
+              - name: InstallAcrobat
+                action: ExecutePowerShell
+                inputs:
+                  commands:
+                    - echo "Installing Adobe Acrobat..."
+                    - Start-Process -FilePath "C:\\Users\\Administrator\\Acrobat_24.1_en_US_WIN_64\\Acrobat 24.1\\Build\\Setup\\APRO24.1\\Adobe Acrobat\\setup.exe" -ArgumentList "/quiet" -Wait
+                    - Remove-Item -Path "C:\\Users\\Administrator\\Acrobat_24.1_en_US_WIN_64" -Recurse -Force
+  ############
   # RECIPE
-  #############
-  SREWindowsImageRecipe:
+  ############
+  RecipeSREWindows:
     Type: "AWS::ImageBuilder::ImageRecipe"
     Properties:
-      Name: !Sub "${AWS::StackName}-SREWindowsImageRecipe"
+      Name: !Sub "RecipeSREWindows-${AWS::StackName}"
       Version: !Ref Ver
       ParentImage: !Ref MasterAMI
-      Description: !Sub "${AWS::StackName}-SREWindowsImageRecipe"
+      Description: !Sub "RecipeSREWindows-${AWS::StackName}"
       Components:
         - ComponentArn: !GetAtt ComponentConfigureOS.Arn
         - ComponentArn: !GetAtt ComponentSREWindows.Arn
+        - ComponentArn: !GetAtt ComponentAdobeAcrobat.Arn
+        - ComponentArn: !GetAtt ComponentNotepad.Arn
+        - ComponentArn: !GetAtt ComponentOffice365.Arn
+        - ComponentArn: !GetAtt ComponentTanium.Arn
+        - ComponentArn: !GetAtt ComponentCrowdStrike.Arn
       Tags:
-        Name: !Join ["-", [!Ref AWS::StackName, "SREWindowsImageRecipe"]]
-        ResourceType: "RLCatalyst-Research-Gateway"
+        Name: !Sub "RecipeSREWindows-${AWS::StackName}"
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
       WorkingDirectory: C:\Users\Administrator
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            DeleteOnTermination: true
+            VolumeSize: 64
+            VolumeType: "gp2"
       AdditionalInstanceConfiguration: 
         UserDataOverride: 
           Fn::Base64: !Sub |
@@ -130,13 +394,10 @@ Resources:
             reg add "HKLM\System\CurrentControlSet\Control\Terminal Server" /v "fDenyTSConnections" /t REG_DWORD /d 0 /f
 
             # 2) Allow incoming RDP on firewall
-            # Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
             netsh advfirewall firewall set rule group="Remote Desktop" new enable=yes
 
             # 3) Enable secure RDP authentication
-            # set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 0   
             reg add "HKLM\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v "UserAuthentication" /t REG_DWORD /d 0 /f
-
 
             # First, make sure WinRM can't be connected to
             netsh advfirewall firewall set rule name="Windows Remote Management (HTTP-In)" new enable=yes action=block
@@ -167,12 +428,13 @@ Resources:
             netsh advfirewall firewall set rule name="Windows Remote Management (HTTP-In)" new action=allow localip=any remoteip=any
             Start-Service -Name WinRM
             </powershell>
-
-
-  SREWindowsInfraConfig:
+  ##############
+  # INFRA CONFIG
+  ##############
+  InfraConfigSREWindows:
     Type: "AWS::ImageBuilder::InfrastructureConfiguration"
     Properties:
-      Name: !Sub "${AWS::StackName}-SREWindows-InfraConfig"
+      Name: !Sub "InfraConfig-SREWindows-${AWS::StackName}"
       InstanceProfileName: !Ref ResearchGatewayImgBldrInstancePfl
       InstanceTypes:
         - "m5.large"
@@ -185,9 +447,20 @@ Resources:
           S3BucketName: !Ref SourceBucketName
           S3KeyPrefix: !Join ["/", ["Logs", "RL_RG_SREWindows", !Ref Ver]]
       Tags:
-        Name: !Join ["-", [!Ref AWS::StackName, "SREWindowsInfraConfig"]]
-        ResourceType: "RLCatalyst-Research-Gateway"        
-
+        Name: !Sub "InfraConfig-SREWindows-${AWS::StackName}"
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+  ############
+  # SEC GROUP
+  ############
   ResearchGatewayImgBldrInstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -196,17 +469,20 @@ Resources:
       Tags:
         - Key: Name
           Value:
-            !Join ["-", [!Ref AWS::StackName, "BuildAMIInstanceSecurityGroup"]]
-        - Key: ResourceType
-          Value: "RLCatalyst-Research-Gateway"
+            !Join ["-", ["ImgBldrInstanceSecurityGroup-SREWindows", !Ref AWS::StackName]]
 
+  ##############
+  # INST PROFILE
+  ##############
   ResearchGatewayImgBldrInstancePfl:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
       Path: "/"
       Roles:
         - !Ref ResearchGatewayInstanceRole
-
+  ############
+  # INST ROLE
+  ############
   ResearchGatewayInstanceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -221,51 +497,64 @@ Resources:
               Service: [ec2.amazonaws.com]
             Action:
               - sts:AssumeRole
-      Path: /        
-
+      Path: /
   ###############
   # DISTRIBUTION
   ###############      
-
-  SREWindowsDistributionConfiguration:
+  DistConfigSREWindows:
     Type: "AWS::ImageBuilder::DistributionConfiguration"
     Properties:
-      Name: !Sub "${AWS::StackName}-SREWindowsDistributionConfig"
+      Name: !Sub "DistConfigSREWindows-${AWS::StackName}"
       Description: "SREWindows for RLCatalyst Research Gateway"
       Distributions:
-        
         - Region: "us-east-1"
           AmiDistributionConfiguration:
             Name: "SREWindows {{ imagebuilder:buildDate }}"
             Description: "SREWindows for RLCatalyst Research Gateway"
             AmiTags:
-              RLCatalystProduct: "SREWindows"
-        
+              Name: "SREWindowsAMI"
       Tags:
-        Name: "SREWindows"
-        RLCatalystProduct: "SREWindows"
-
-
-  SREWindowsImagePipeline:
+        Name: !Sub "DistConfigSREWindows-${AWS::StackName}"
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
+  ############
+  # PIPELINE
+  ############
+  PipelineSREWindows:
     Type: "AWS::ImageBuilder::ImagePipeline"
     Properties:
-      Name: !Sub "${AWS::StackName}-Pipeline_SREWindows"
+      Name: !Sub "Pipeline-SREWindows-${AWS::StackName}"
       Description: "Pipeline to build SREWindows AMI for RLCatalyst Research Gateway"
-      ImageRecipeArn: !Ref SREWindowsImageRecipe
-      InfrastructureConfigurationArn: !Ref SREWindowsInfraConfig
-      DistributionConfigurationArn: !Ref SREWindowsDistributionConfiguration
+      ImageRecipeArn: !Ref RecipeSREWindows
+      InfrastructureConfigurationArn: !Ref InfraConfigSREWindows
+      DistributionConfigurationArn: !Ref DistConfigSREWindows
       ImageTestsConfiguration:
-        ImageTestsEnabled: false
-        TimeoutMinutes: 90
+        ImageTestsEnabled: true
+        TimeoutMinutes: 60
       Status: "ENABLED"
       Tags:
-        Name: "RL_RG_SREWindows"
-        ResourceType: "RLCatalyst-Research-Gateway"
-
-
+        Name: !Sub "Pipeline-SREWindows-${AWS::StackName}"
+        CostCenter: PG000000
+        CriticalityTier: Business Operational
+        Compliance: HIPAA
+        Environment: !Ref Environment
+        ApplicationName: ResearchGatewayPROD
+        Department: DataScience
+        ApplicationCustodian: txs908
+        ServiceNow: XXX
+        DepartmentEmail: txs908@miami.edu
+        UHITOwner: txs908
 Outputs:
-  SREWindowsImagePipeline:
+  PipelineSREWindows:
     Description: SREWindows Image Builder Pipeline
-    Value: !Ref SREWindowsImagePipeline
+    Value: !Ref PipelineSREWindows
     Export:
-      Name: !Sub "${AWS::StackName}-SREWindowsPipelineName"
+      Name: !Sub "Pipeline-SREWindows-${AWS::StackName}"

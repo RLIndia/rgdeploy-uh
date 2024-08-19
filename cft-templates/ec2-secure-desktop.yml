@@ -59,12 +59,32 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Effect: Allow
+          - Sid: AllowSSMParamActions
+            Effect: Allow
             Action:
               - ssm:GetParameter
               - ssm:PutParameter
               - ssm:DescribeParameters
             Resource: "*"
+          - Sid: AllowAccessToEncryptionKeys
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey
+              - kms:DescribeKey
+            Resource: "*"
+          - Sid: AllowS3AccessToCentralLogs
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:GetEncryptionConfiguration
+            Resource: 
+              - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-1/*
+              - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2/*
+              - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-1
+              - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2 
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -391,7 +411,7 @@ Resources:
     Properties:
       LaunchTemplate:
         LaunchTemplateName: "RG-IMDSv2"
-        Version: 1      
+        Version: 2      
       UserData:
         Fn::Base64: !Sub |
           #!/usr/bin/env bash
