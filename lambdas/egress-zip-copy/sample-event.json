@@ -1,0 +1,1 @@
+{ "body": "{\"sourceBucket\":\"851725204794-rg-egress-storever\",\"sourcePrefix\":\"stage/66b1d4e6855dd2c6d92fdb99/20240806122254706/\",\"destinationBucket\":\"851725204794-rg-egress-notification-bucketver\",\"destinationPrefix\":\"66b1d4e6855dd2c6d92fdb99/20240806122254706.zip\"}"  }
