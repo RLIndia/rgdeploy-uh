@@ -38,6 +38,8 @@
                 "s3:GetBucketPolicy",
                 "s3:PutEncryptionconfiguration",
                 "s3:GetEncryptionconfiguration",
+                "servicecatalog:DisassociatePrincipalFromPortfolio",
+                "servicecatalog:DisassociateProductFromPortfolio",
                 "sns:CreateTopic",
                 "sns:ListTopics",
                 "sns:DeleteTopic",
