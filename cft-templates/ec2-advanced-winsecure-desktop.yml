@@ -308,7 +308,7 @@ Resources:
           </powershell>
           <persist>true</persist>                   
       InstanceType: !Ref 'InstanceType'
-      ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/windows-nice-dcv-ami}}"
+      ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/adv-windows-nice-dcv-ami}}"
       IamInstanceProfile: !Ref InstanceProfile
       BlockDeviceMappings:
         - DeviceName: /dev/sda1

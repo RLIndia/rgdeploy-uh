@@ -82,7 +82,7 @@ cp "${FILES_DIR}/offline-packages/goofys" /usr/local/bin/goofys
 chmod +x "/usr/local/bin/goofys"
 
 # Install ec2 instance connect agent
-sudo yum install ec2-instance-connect-1.1
+# sudo yum install ec2-instance-connect-1.1
 
 # Create S3 mount script and config file
 echo "Mounting S3"
@@ -96,15 +96,15 @@ OS_VERSION=`cat /etc/os-release | grep VERSION= | sed 's/VERSION="//' | sed 's/"
 # Apply updates to environments based on environment type
 case "$(env_type)" in
     "ec2-linux") # Add mount script to bash profile
-        yum install -y fuse-2.9.2
+        yum install -y fuse-2.9.9
         printf "\n# Mount S3 study data\nmount_s3.sh\n\n" >> "/home/ec2-user/.bash_profile"
         ;;
     "rstudio") # Add mount script to bash profile
-        yum install -y fuse-2.9.2
+        yum install -y fuse-2.9.9
         printf "\n# Mount S3 study data\nmount_s3.sh\n\n" >> "/home/${RSTUDIO_USER}/.bash_profile"
         ;;
     "nextflow") # Add mount script to bash profile
-        yum install -y fuse-2.9.2
+        yum install -y fuse-2.9.9
         printf "\n# Mount S3 study data\nmount_s3.sh\n\n" >> "/home/ec2-user/.bash_profile"
         ;;
     "sagemaker") # Update config and restart Jupyter
