@@ -84,15 +84,15 @@ Resources:
               - name: AddFiles
                 action: S3Download
                 inputs:
-                - source: s3://${SourceBucketName}/ec2-secure-windows.zip
-                  destination: C:/Users/Administrator/ec2-secure-windows.zip
+                - source: s3://${SourceBucketName}/ec2-winsecure-image.zip
+                  destination: C:/Users/Administrator/ec2-winsecure-image.zip
                   overwrite: true
               - name: ExtractFiles
                 action: ExecutePowerShell
                 inputs:
                   commands:
-                    - echo "Extracting ec2-secure-windows.zip..."
-                    - Expand-Archive -Path "C:\\Users\\Administrator\\ec2-secure-windows.zip" -DestinationPath "C:\\Program Files\\ResearchGateway" 
+                    - echo "Extracting ec2-winsecure-image.zip..."
+                    - Expand-Archive -Path "C:\\Users\\Administrator\\ec2-winsecure-image.zip" -DestinationPath "C:\\Program Files\\ResearchGateway" 
               - name: InstallPython
                 action: ExecutePowerShell
                 inputs:
@@ -109,8 +109,8 @@ Resources:
                   commands:
                     - Copy-Item -Path "C:\\Program Files\\ResearchGateway\\provision-windows.ps1" -Destination "C:\\Users\\Administrator\\provision-windows.ps1"
                     - "C:\\Users\\Administrator\\provision-windows.ps1"
-                    - echo "Removing archive ec2-secure-windows.zip"
-                    - Remove-Item 'C:/Users/Administrator/ec2-secure-windows.zip'
+                    - echo "Removing archive ec2-winsecure-image.zip"
+                    - Remove-Item 'C:/Users/Administrator/ec2-winsecure-image.zip'
               - name: ChangeAMIPassword
                 action: ExecutePowerShell
                 inputs:
@@ -162,7 +162,7 @@ Resources:
                   commands:
                     - $installerPath = "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033\\SetupClient.exe"
                     - $installerBatPath = "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033\\install.bat"
-                    - if ((Test-Path -Path "$installerPath") -and (Test-Path -Path "$installerBatPath")){ Start-Process -FilePath "$installerBatPath" -Wait } else { echo "Installer not found at $installerPath or batch file not found at $installerBatPath"}
+                    - if ((Test-Path -Path "$installerPath") -and (Test-Path -Path "$installerBatPath")){ Start-Process -FilePath "$installerBatPath" -Wait -NoNewWindow} else { echo "Installer not found at $installerPath or batch file not found at $installerBatPath"}
                     - Remove-Item -Path "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033" -Force -Recurse
                     - Remove-Item -Path "C:\\Users\\Administrator\\TaniumClient_7.6.4.2033.zip" -Force 
   ComponentCrowdStrike:
@@ -207,9 +207,11 @@ Resources:
                 action: ExecutePowerShell
                 inputs:
                   commands:
+                    - cd  "C:\\Users\\Administrator\\CrowdStrikeAgent"
                     - $installerPath = "C:\\Users\\Administrator\\CrowdStrikeAgent\\WindowsSensor.MaverickGyr.exe"
-                    - $installerBatPath = "C:\\Users\\Administrator\\CrowdStrikeAgent\\TEST-UHIT-WIN-SERVER.bat"
+                    - $installerBatPath = "C:\\Users\\Administrator\\CrowdStrikeAgent\\PROD-UHIT-WIN-SERVER.bat"
                     - if ((Test-Path $installerPath) -and (Test-Path $installerBatPath)){ Start-Process -FilePath "$installerBatPath" -Wait } else { echo "Installer not found at $installerPath or batch file not found at $installerBatPath" }
+                    - cd  "C:\\Users\\Administrator"
                     - Remove-Item -Path "C:\\Users\\Administrator\\CrowdStrikeAgent" -Force -Recurse
   ComponentNotepad:
     Type: "AWS::ImageBuilder::Component"
@@ -298,7 +300,7 @@ Resources:
                 inputs:
                   commands:
                     - echo "Installing Microsoft Office..."
-                    - Start-Process -FilePath "C:\\Users\\Administrator\\office365\\setup.exe" -ArgumentList "/configure C:\\Users\\Administrator\\office365\\Configuration.xml" -Wait
+                    - Start-Process -FilePath "C:\\Users\\Administrator\\office365\\setup.exe" -ArgumentList "/configure C:\\Users\\Administrator\\office365\\Configuration.xml" -Wait -NoNewWindow
   ComponentAdobeAcrobat:
     Type: "AWS::ImageBuilder::Component"
     Properties:
