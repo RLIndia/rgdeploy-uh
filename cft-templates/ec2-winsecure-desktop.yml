@@ -193,6 +193,7 @@ Resources:
                 python "C:\Program Files\ResearchGateway\win-nice-dcv-auth-svc\win-nice-dcv-auth-svc.py" --startup auto install
                 echo "Starting win-nice-dcv-auth-svc"
                 python "C:\Program Files\ResearchGateway\win-nice-dcv-auth-svc\win-nice-dcv-auth-svc.py" start 
+                timeout /t 5 /nobreak
                 echo "running test for win-nice-dcv-auth-svc \n Expected response : <auth result="No"><username>Administrator</username></auth>"
                 echo "test result :"
                 curl -i -X POST http://localhost:8445 -H "Content-Type: application/x-www-form-urlencoded" -H "Accept: application/xml" -d "sessionId=console&authenticationToken=xxxxx&clientAddress=127.0.0.1"
@@ -254,7 +255,7 @@ Resources:
                 Powershell.exe -executionpolicy remotesigned -WindowStyle hidden -File  "C:\Program Files\ResearchGateway\mount_s3.ps1                                 ""
     CreationPolicy:
       ResourceSignal:
-        Timeout: "PT15M"   
+        Timeout: "PT20M"   
     Properties:
       LaunchTemplate:
         LaunchTemplateName: "RG-IMDSv2"
@@ -268,6 +269,7 @@ Resources:
 
           Write-Host "Creating files from config for mounting"
           cfn-init.exe -v --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} --configsets default
+
           Write-Host "Setting Administrator password"
           net user Administrator ${Password}
           Start-Service -Name 'AmazonSSMAgent'
@@ -288,21 +290,21 @@ Resources:
           Copy-Item -Path "C:\Program Files\ResearchGateway\default.perm" -Destination "C:\Program Files\NICE\DCV\Server\conf\default.perm" -Force
           Write-Host "Restarting dcvserver"
           Restart-Service dcvserver    
-
-
          
           Write-Host "Fixing Startup files"
           Copy-Item -Path "C:/Program Files/ResearchGateway/mount_s3.bat" -Destination "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\" -Force
           Copy-Item -Path "C:/Program Files/ResearchGateway/set_user_token.bat" -Destination "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\" -Force
 
           Write-Host "Setting user token"
-          Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\set_user_token.bat`""  -NoNewWindow -Wait         
+          #Start-Process -FilePath "cmd.exe" -ArgumentList "/c `"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\set_user_token.bat`""  -NoNewWindow -Wait
+          & "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\set_user_token.bat"
+
           if (Test-Path -Path "$rgfolder\\startup.ps1") {
             Write-Host "Found startup script. Executing."
             & "$rgfolder\\startup.ps1"
           }
-          cfn-signal.exe -e 0 --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
           
+          cfn-signal.exe -e 0 --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
           # End the transcript (stop logging)
           Stop-Transcript
           </powershell>
@@ -331,9 +333,9 @@ Resources:
         - Key: Compliance
           Value: HIPAA
         - Key: Environment
-          Value: QA
+          Value: PROD
         - Key: ApplicationName
-          Value: ResearchGatewayQA
+          Value: ResearchGatewayPROD
         - Key: Department
           Value: DataScience
         - Key: ApplicationCustodian
