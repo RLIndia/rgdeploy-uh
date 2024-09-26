@@ -125,22 +125,26 @@ sleep 2
 
 ###################################################
 # identify the right DCV server to download
-dcv_version="2023"
-echo Checking for latest DCV $dcv_version version 
-dcv_server=`curl --silent --output - https://download.nice-dcv.com/ | \
-    grep href | egrep "$dcv_version" | grep "el9" | grep Server | sed -e 's/.*http/http/' -e 's/tgz.*/tgz/' | head -1`
-echo "We will be downloading DCV server from $dcv_server"
-echo 
+#dcv_version="2023"
+#echo Checking for latest DCV $dcv_version version 
+#dcv_server=`curl --silent --output - https://download.nice-dcv.com/ | \
+   # grep href | egrep "$dcv_version" | grep "el9" | grep Server | sed -e 's/.*http/http/' -e 's/tgz.*/tgz/' | head -1`
+#echo "We will be downloading DCV server from $dcv_server"
+#echo 
+
+sudo yum install wget -y
 
 # install DCV 
 # use $dcv_server
 # wget https://d1uj6qtbmh3dt5.cloudfront.net/2019.0/Servers/nice-dcv-2019.0-7318-el8.tgz
 sudo rpm --import https://d1uj6qtbmh3dt5.cloudfront.net/NICE-GPG-KEY # allow the package manager to verify the signature
-echo Downloading DCV Server from $dcv_server
-wget $dcv_server 
+#echo Downloading DCV Server from $dcv_server
+#wget $dcv_server 
 
-tar zxvf nice-dcv-*el9*.tgz
-cd nice-dcv-*x86_64
+wget https://d1uj6qtbmh3dt5.cloudfront.net/2023.1/Servers/nice-dcv-2023.1-16388-el9-x86_64.tgz
+tar -xvzf nice-dcv-2023.1-16388-el9-x86_64.tgz && cd nice-dcv-2023.1-16388-el9-x86_64
+
+
 sudo yum install nice-dcv-server-2023.1.16388-1.el9.x86_64.rpm \
      nice-xdcv-2023.1.565-1.el9.x86_64.rpm  \
      nice-dcv-web-viewer-2023.1.16388-1.el9.x86_64.rpm  \

@@ -273,4 +273,4 @@ sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 sudo systemctl enable docker
 sudo systemctl start docker
 
-sudo docker pull relevancelab/nice-dcv-auth-svc:1.0.0
+sudo docker pull relevancelab/nice-dcv-auth-svc:latest
