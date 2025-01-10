@@ -43,6 +43,7 @@ Resources:
                 Action:
                   -  "s3:*"
                   -  "s3-object-lambda:*"
+                  -  "kms:*"
                 Resource: "*"
   LambdaFunction:
     Type: AWS::Lambda::Function
