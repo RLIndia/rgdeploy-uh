@@ -348,6 +348,108 @@
     }
   },
   {
+    "_id": {
+  "$oid": "664c818a51a6f1261a746058"
+},
+    "key" : "settingCreateSkipUpdateBucketPolicy",
+    "value" : true
+},
+{
+    "_id": {
+  "$oid": "66683db0d3b81db624e0aec7"
+},
+    "key" : "resourceTags",
+    "value" : [
+            {
+                    "Key" : "CostCenter",
+                    "Value" : "PG000000"
+            },
+            {
+                    "Key" : "CriticalityTier",
+                    "Value" : "Business Operational"
+            },
+            {
+                    "Key" : "Compliance",
+                    "Value" : "HIPAA"
+            },
+            {
+                    "Key" : "Environment",
+                    "Value" : "QA"
+            },
+            {
+                    "Key" : "ApplicationName",
+                    "Value" : "ResearchGatewayQA"
+            },
+            {
+                    "Key" : "Department",
+                    "Value" : "DataScience"
+            },
+            {
+                    "Key" : "ApplicationCustodian",
+                    "Value" : "txs908"
+            },
+            {
+                    "Key" : "ServiceNow",
+                    "Value" : "XXX"
+            },
+            {
+                    "Key" : "departmentemail",
+                    "Value" : "txs908@miami.edu"
+            },
+            {
+                    "Key" : "UHITOwner",
+                    "Value" : "txs908"
+            }
+    ]
+},
+{
+  "_id": {
+"$oid": "66a787a51ea5e98d3e94eaf3"
+},
+  "key" : "allowedIPRanges",
+  "value" : [
+          {
+                  "CidrIp" : "10.0.0.0/8",
+                  "Description" : "IP Range to allow"
+          },
+          {
+                  "CidrIp" : "172.16.0.0/24",
+                  "Description" : "IP Range to allow"
+          }
+  ]
+},
+{
+  "_id": {
+"$oid": "66ab7b78abcb08326d4393a7"
+},
+  "key" : "egressRequestMails",
+  "value" : [
+          {
+                  "key" : "data admin",
+                  "value" : {
+                          "initiated" : "request initiated",
+                          "pending" : "Hi,A new egress request, <request-Id>, has been submitted by <submitter-email> on <date-of-submission> in the project, <project-name>, and needs your approval.Please sign in to the Research Portal and click on the project card. Click on the Egress Requests tab. Find the egress request with the id mentioned above. You can Approve or Reject the request from the context menu (3-dots icon) of the request.To review the files, click on “Review” in the context menu. This action will launch a new workspace in the project. Once the workspace is active, please connect to it via Remote Desktop. The files submitted in the request will be visible under /home/ec2-user/studies/<request-Id>.Note that all current pending requests are mounted to the same workspace under different folders labelled with the request-Id.You can then review the files using the tool of your choice which will be preinstalled on the machine.  Once you review the files, log in to the Research Gateway and approve the request from the Egress Requests tab.The Research Gateway team.",
+                          "approved" : "approved by data admin",
+                          "rejected" : "rejected by data admin"
+                  }
+          },
+          {
+                  "key" : "researcher",
+                  "value" : {
+                          "initiated" : "requested initiated for researcher",
+                          "pending" : "pending for researcher",
+                          "approved" : "Hi,The Data Administrator for project <project-name> has approved your egress request, <request-Id>. You can now download the files from the Egress Store tab of the workspace you submitted the request from. Please note that the Download option will be disabled if you submit a new request.The Research Gateway team.",
+                          "rejected" : "rejected for researcher"
+                  }
+          },
+          {
+                  "key" : "signature",
+                  "value" : "The Research Gateway Team."
+          }
+  ]
+},
+
+  {
     "_id" : { 
       "$oid": "626fb82256aaa6ec4fe242e9"
     },
@@ -429,7 +531,7 @@
 
                 ]
         },
-        "studySelectionCount" : 5.0
+        "studySelectionCount" : 10.0
 },
 {
   "_id" : { 

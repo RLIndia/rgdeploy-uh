@@ -21,7 +21,7 @@ services:
       - sp2net
 
   cc-3102:
-    image: 045938549113.dkr.ecr.us-east-2.amazonaws.com/researchportal:_fd_1.21.0_b2046
+    image: 045938549113.dkr.ecr.us-east-2.amazonaws.com/researchportal:_fd_1.22.0_b2341
     security_opt:
       - no-new-privileges:true
     secrets:
