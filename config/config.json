@@ -36,7 +36,7 @@
   "googleOAuthCredentials": {
     "clientID": "ABCDRANDOMESTRING",
     "clientSecret": "abcdEFGHRandomeString",
-    "callbackURL": "https://research.rlcatalyst.com"
+    "callbackURL": "https://qa.researchsre.miami.edu"
   },
   "baseAccountPolicyName": "REPLACE_WITH_BASE_ACCOUNT_POLICY_NAME",
   "baseAccountInstanceRoleName": "REPLACE_WITH_BASE_ACCOUNT_ROLE_NAME",
@@ -67,27 +67,28 @@
       "host": ""
     }
   },
-  "LoginStrategy": "cognito",
+  "LoginStrategy": "saml",
   "samlConfig": {
-    "domain": "https://dev-64629994.okta.com",
-    "path": "/samllogin",
-    "entryPoint": "https://dev-64629994.okta.com/app/dev-64629994_researchgateway_1/exkaoo9k27Z5n8YCc5d7/sso/saml",
-    "issuer": "http://www.okta.com/exkaoo9k27Z5n8YCc5d7",
-    "cert": "/rlc/cc/server/app/config/okta.cert",
-    "logoutUrl": "https://enterprise-test1.rlcatalyst.com/logout",
+    "domain": "https://login.microsoftonline.com/2a144b72-f239-42d4-8c0e-6f0f17c48e33",
+    "path": "https://qa.researchsre.miami.edu/samllogin",
+    "entryPoint": "https://login.microsoftonline.com/2a144b72-f239-42d4-8c0e-6f0f17c48e33/saml2",
+    "issuer": "https://qa.researchsre.miami.edu",
+    "cert": "/rlc/cc/server/app/config/idp_cert.pem",
+    "privateSPCert": "/rlc/cc/server/app/config/key.pem",
+    "logoutUrl": "https://qa.researchsre.miami.edu/logout",
     "groupToRoleMapping": {
       "admin": [
-        "RgAdmin"
+        "SREQA_Role_Admin"
       ],
       "principal": [
-        "RgPrincipal"
+        "SREQA_Role_PI"
       ],
       "researcher": [
-        "RgResearcher"
+        "SREQA_Role_Researcher"
       ]
     },
-    "groupToOrgMapping": "RgOU",
-    "groupToProjectMapping": "RgProject",
+    "groupToOrgMapping": "SREQA_OU",
+    "groupToProjectMapping": "SREQA_Proj_*",
     "roleMapToRg": {
       "0": "researcher",
       "1": "principal",
@@ -221,5 +222,14 @@
   "sampleCSVBucketRegion": "REPLACE_WITH_REGION",
   "sessionMaxAge" : 900000,
   "defaultSubscriptionPeriod" : 30,
-  "ttlForLockMechanism" : 180
+  "ttlForLockMechanism" : 180,
+  "deployment" : {
+    "type" : "private",
+    "lambda" : {
+      "functionName": "REPLACE_WITH_Lambda function",
+      "principal":"sns.amazonaws.com",
+      "region":"us-east-1",
+      "sourceArn" :""
+    }
+  }
 }
