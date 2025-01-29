@@ -1,22 +1,21 @@
-Metadata: 
+Metadata:
   License: Apache-2.0
-AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS CloudFormation Template to create an GPU based EC2 windows instance with NICE DCV pre installed..'
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "AWS CloudFormation Template to create an GPU based EC2 windows instance with NICE DCV pre installed.."
 Parameters:
-
   Namespace:
     Type: String
     Description: An environment name that will be prefixed to resource names
   Password:
     Type: String
     NoEcho: True
-    Description: Administrator Password  
+    Description: The administrator password must be at least six characters long and include characters from at least three of the following categories- English uppercase letters, English lowercase letters, base-10 digits and non-alphabetic symbols.
   S3Mounts:
     Type: String
-    Description: A JSON array of objects with name, bucket, and prefix properties used to mount data  
+    Description: A JSON array of objects with name, bucket, and prefix properties used to mount data
   IamPolicyDocument:
     Type: String
-    Description: The IAM policy to be associated with the launched workstation 
+    Description: The IAM policy to be associated with the launched workstation
   VPC:
     Description: The VPC in which the EC2 instance will reside
     Type: AWS::EC2::VPC::Id
@@ -25,10 +24,10 @@ Parameters:
     Type: AWS::EC2::Subnet::Id
   ALBSecurityGroup:
     Description: Security Group Id of the ALB to which the EC2 instance traffic will be allowed from
-    Type: AWS::EC2::SecurityGroup::Id    
-  WorkSpaceSecurityGroup:  
+    Type: AWS::EC2::SecurityGroup::Id
+  WorkSpaceSecurityGroup:
     Description: Security Group Id of the workspace to which the EC2 instance traffic will be allowed from
-    Type: AWS::EC2::SecurityGroup::Id 
+    Type: AWS::EC2::SecurityGroup::Id
   EnvironmentInstanceFiles:
     Type: String
     Description: >-
@@ -36,26 +35,20 @@ Parameters:
       the environment instance, including any bootstrap scripts
 
   InstanceType:
-    Description: Choose the instance type e.g t3.medium (2vCPU , 2GiB RAM), t3.large (2vCPU, 8GiB RAM), t3.xlarge(4vCPU, 16GiB RAM)
+    Description: Choose the instance type e.g t3.large (2vCPU, 8GiB RAM),t3.xlarge (4vCPU, 16GiB RAM), t3.2xlarge (8vCPU , 32GiB RAM)
     Type: String
-    Default: t3.medium
-    AllowedValues:
-      [
-        t3.medium,
-        t3.large,
-        t3.xlarge
-      ]
+    Default: t3.large
+    AllowedValues: [t3.large, t3.xlarge, t3.2xlarge]
     ConstraintDescription: must be a valid EC2 instance type.
   EBSVolumeSize:
     Description: The initial size of the volume (in GBs)  EBS will use for storage.
     Type: Number
-    Default: 64
+    Default: 80
 
 Conditions:
-  IamPolicyEmpty: !Equals [!Ref IamPolicyDocument, '{}']
+  IamPolicyEmpty: !Equals [!Ref IamPolicyDocument, "{}"]
 
 Resources:
-
   SSMPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -84,87 +77,94 @@ Resources:
               - s3:PutObject
               - s3:PutObjectAcl
               - s3:GetEncryptionConfiguration
-            Resource: 
+            Resource:
               - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-1/*
               - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2/*
               - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-1
-              - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2            
+              - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2
+
+          - Sid: AllowS3AccessToDCVLicenceServer
+            Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource:
+              - arn:aws:s3:::dcv-license.us-east-1/*
 
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: Permission boundary for EC2 instance role
-      ManagedPolicyName: !Join ['-', [Ref: Namespace, 'ec2-windows-permission-boundary']]
+      ManagedPolicyName:
+        !Join ["-", [Ref: Namespace, "ec2-windows-permission-boundary"]]
       PolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Action:
-              - 's3:*'
-            Resource: '*'
+              - "s3:*"
+            Resource: "*"
           - Effect: Allow
             Action:
-              - 'sts:*'
-            Resource: '*'          
+              - "sts:*"
+            Resource: "*"
           - Effect: Allow
             Action:
-              - 'kms:*'
-            Resource: '*'
+              - "kms:*"
+            Resource: "*"
           - Effect: Allow
             Action:
-              - 'ssm:*'
-            Resource: '*'
+              - "ssm:*"
+            Resource: "*"
           - Effect: Allow
             Action:
-              - 'ssmmessages:*'
-            Resource: '*'
+              - "ssmmessages:*"
+            Resource: "*"
           - Effect: Allow
             Action:
-              - 'ec2messages:*'
-            Resource: '*'
+              - "ec2messages:*"
+            Resource: "*"
           - Effect: Allow
             Action:
-              - 'sns:Publish'     
-            Resource: '*'                     
+              - "sns:Publish"
+            Resource: "*"
           - Effect: Deny
             NotAction:
-              - 's3:*'
-              - 'ssm:*'
-              - 'kms:*'
-              - 'sts:*'
-            NotResource: '*'   
-          
+              - "s3:*"
+              - "ssm:*"
+              - "kms:*"
+              - "sts:*"
+            NotResource: "*"
 
   IAMRole:
-    Type: 'AWS::IAM::Role'
+    Type: "AWS::IAM::Role"
     Properties:
-      RoleName: !Join ['-', [Ref: Namespace, 'ec2-role']]
-      Path: '/'
+      RoleName: !Join ["-", [Ref: Namespace, "ec2-role"]]
+      Path: "/"
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
-          - Effect: 'Allow'
+          - Effect: "Allow"
             Principal:
               Service:
-                - 'ec2.amazonaws.com'
+                - "ec2.amazonaws.com"
             Action:
-              - 'sts:AssumeRole'
+              - "sts:AssumeRole"
       Policies:
         - !If
           - IamPolicyEmpty
-          - !Ref 'AWS::NoValue'
-          - PolicyName: !Join ['-', [Ref: Namespace, 's3-studydata-policy']]
+          - !Ref "AWS::NoValue"
+          - PolicyName: !Join ["-", [Ref: Namespace, "s3-studydata-policy"]]
             PolicyDocument: !Ref IamPolicyDocument
       ManagedPolicyArns:
         - Ref: SSMPolicy
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-      PermissionsBoundary: !Ref InstanceRolePermissionBoundary        
+      PermissionsBoundary: !Ref InstanceRolePermissionBoundary
 
   InstanceProfile:
-    Type: 'AWS::IAM::InstanceProfile'
+    Type: "AWS::IAM::InstanceProfile"
     Properties:
-      InstanceProfileName: !Join ['-', [Ref: Namespace, 'ec2-profile']]
-      Path: '/'
+      InstanceProfileName: !Join ["-", [Ref: Namespace, "ec2-profile"]]
+      Path: "/"
       Roles:
         - Ref: IAMRole
 
@@ -179,8 +179,8 @@ Resources:
           files:
             "C:/Users/Administrator/s3_mount.txt":
               content: !Sub |
-                ${S3Mounts}    
-            "C:/Program Files/ResearchGateway/install_custom_auth.bat":   
+                ${S3Mounts}
+            "C:/Program Files/ResearchGateway/install_custom_auth.bat":
               content: |
                 echo "compiling custom auth service"
                 pip install -r "C:\Program Files\ResearchGateway\win-nice-dcv-auth-svc\requirements.txt"
@@ -197,7 +197,7 @@ Resources:
                 echo "running test for win-nice-dcv-auth-svc \n Expected response : <auth result="No"><username>Administrator</username></auth>"
                 echo "test result :"
                 curl -i -X POST http://localhost:8445 -H "Content-Type: application/x-www-form-urlencoded" -H "Accept: application/xml" -d "sessionId=console&authenticationToken=xxxxx&clientAddress=127.0.0.1"
-            "C:/Program Files/ResearchGateway/fix-custom-auth.ps1":   
+            "C:/Program Files/ResearchGateway/fix-custom-auth.ps1":
               content: |
                 $serviceName = 'win-nice-dcv-auth-svc'
                 $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
@@ -250,16 +250,16 @@ Resources:
                 aws ssm put-parameter --name "%parameter_name%" --type "SecureString" --value "{\"auth_token\":\"%auth_token%\",\"session_id\":\"%session_id%\"}" --region "%region%" --overwrite
                 echo User token set successfully
             "C:/Program Files/ResearchGateway/mount_s3.bat":
-               content: |
+              content: |
                 echo "mounting study"
                 Powershell.exe -executionpolicy remotesigned -WindowStyle hidden -File  "C:\Program Files\ResearchGateway\mount_s3.ps1                                 ""
     CreationPolicy:
       ResourceSignal:
-        Timeout: "PT20M"   
+        Timeout: "PT30M"
     Properties:
       LaunchTemplate:
         LaunchTemplateName: "RG-IMDSv2"
-        Version: 2              
+        Version: 2
       UserData:
         Fn::Base64: !Sub |
           <powershell>     
@@ -273,7 +273,7 @@ Resources:
           Write-Host "Setting Administrator password"
           net user Administrator ${Password}
           Start-Service -Name 'AmazonSSMAgent'
-          
+
           $rgfolder="C:\\Program Files\\ResearchGateway"
           Write-Host "Downloading latest fixes from ${EnvironmentInstanceFiles}"
           aws s3 cp --region "${AWS::Region}" "${EnvironmentInstanceFiles}/winsecure_desktop/ec2-secure-windows.zip" "C:\\Users\\Administrator"
@@ -290,7 +290,7 @@ Resources:
           Copy-Item -Path "C:\Program Files\ResearchGateway\default.perm" -Destination "C:\Program Files\NICE\DCV\Server\conf\default.perm" -Force
           Write-Host "Restarting dcvserver"
           Restart-Service dcvserver    
-         
+
           Write-Host "Fixing Startup files"
           Copy-Item -Path "C:/Program Files/ResearchGateway/mount_s3.bat" -Destination "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\" -Force
           Copy-Item -Path "C:/Program Files/ResearchGateway/set_user_token.bat" -Destination "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\" -Force
@@ -303,27 +303,28 @@ Resources:
             Write-Host "Found startup script. Executing."
             & "$rgfolder\\startup.ps1"
           }
-          
+          Set-MpPreference -DisableRealtimeMonitoring $true
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender" -Name "DisableAntiSpyware" -Value 1
           cfn-signal.exe -e 0 --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
           # End the transcript (stop logging)
           Stop-Transcript
           </powershell>
-          <persist>true</persist>                   
-      InstanceType: !Ref 'InstanceType'
+          <persist>true</persist>
+      InstanceType: !Ref "InstanceType"
       ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/windows-nice-dcv-ami}}"
       IamInstanceProfile: !Ref InstanceProfile
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
             VolumeSize: !Ref EBSVolumeSize
-            Encrypted: true    
+            Encrypted: true
       NetworkInterfaces:
-        - AssociatePublicIpAddress: 'false'
-          DeviceIndex: '0'
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
           GroupSet:
             - !Ref InstanceSecurityGroup
             - !Ref WorkSpaceSecurityGroup
-          SubnetId: !Ref Subnet            
+          SubnetId: !Ref Subnet
       PropagateTagsToVolumeOnCreation: true
       Tags:
         - Key: CostCenter
@@ -333,9 +334,9 @@ Resources:
         - Key: Compliance
           Value: HIPAA
         - Key: Environment
-          Value: PROD
+          Value: QA
         - Key: ApplicationName
-          Value: ResearchGatewayPROD
+          Value: ResearchGatewayQA
         - Key: Department
           Value: DataScience
         - Key: ApplicationCustodian
@@ -345,13 +346,13 @@ Resources:
         - Key: DepartmentEmail
           Value: txs908@miami.edu
         - Key: UHITOwner
-          Value: txs908     
+          Value: txs908
         - Key: cost_resource
           Value: !Sub ${AWS::StackName}
         - Key: Name
-          Value: !Join ["-", [Ref: Namespace, "ec2-windows"]]  
+          Value: !Join ["-", [Ref: Namespace, "ec2-windows"]]
         - Key: PatchGroup
-          Value: RG-PatchGroup-Windows     
+          Value: RG-PatchGroup-Windows
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -361,19 +362,19 @@ Resources:
           FromPort: 0
           ToPort: 65535
           CidrIp: 0.0.0.0/0
-          
-      SecurityGroupIngress:     
+
+      SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 8443
-          ToPort: 8443      
-          SourceSecurityGroupId: !Ref ALBSecurityGroup         
-      VpcId: !Ref VPC           
+          ToPort: 8443
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      VpcId: !Ref VPC
 
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
-    Value: !Ref 'EC2Instance'
- 
-  AvailabilityZone: 
+    Value: !Ref "EC2Instance"
+
+  AvailabilityZone:
     Description: AvailabilityZone of newly created EC2 instance
     Value: !GetAtt [EC2Instance, AvailabilityZone]
