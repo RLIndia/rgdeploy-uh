@@ -1,7 +1,7 @@
 Metadata:
   License: Apache-2.0
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "AWS CloudFormation Template to create an GPU based EC2 instance with NICE-DCV pre installed."
+Description: "AWS CloudFormation Template to create an RHEL-based EC2 instance with NICE-DCV pre installed."
 
 Parameters:
   Namespace:
@@ -59,15 +59,12 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-          - Sid: AllowSSMParamActions
+          - Sid: AllowAccessToEncryptionKeys
             Effect: Allow
             Action:
               - ssm:PutParameter
               - ssm:GetParameter
               - ssm:DescribeParameters
-          - Sid: AllowAccessToEncryptionKeys
-            Effect: Allow
-            Action:
               - kms:Decrypt
               - kms:Encrypt
               - kms:GenerateDataKey
@@ -84,6 +81,14 @@ Resources:
               - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2/*
               - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-1
               - arn:aws:s3:::aws-accelerator-central-logs-045912947309-us-east-2 
+
+          - Sid: AllowS3AccessToDCVLicenceServer
+            Effect: Allow
+            Action:
+              - s3:GetObject
+            Resource: 
+              - arn:aws:s3:::dcv-license.us-east-1/*
+
   InstanceRolePermissionBoundary:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -164,7 +169,7 @@ Resources:
     Type: AWS::EC2::Instance
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT15M
+        Timeout: PT20M
     Metadata:
       AWS::CloudFormation::Init:
         configSets:
@@ -173,6 +178,37 @@ Resources:
             - config2
         config1:
           files:
+            "/usr/local/bin/start-dcv-session":
+              mode: "000775"
+              owner: "root"
+              group: "root"
+              content: |
+                # Create dcv session start script                
+                #!/bin/bash
+                  service_name="dcvserver"
+                  timeout=20
+                  elapsed_time=0
+
+                  echo "Waiting for $service_name to become active..."
+
+                  while true; do
+                  status=$(systemctl is-active $service_name)
+                  if [[ $status == "active" ]]; then
+                    echo "$service_name is now active."
+                    break
+                  fi
+
+                  if [[ $elapsed_time -ge $timeout ]]; then
+                    echo "Timeout: $service_name did not become active within $timeout seconds."
+                    break
+                  fi
+
+                  sleep 1
+                  elapsed_time=$((elapsed_time+1))
+                  done
+                dcv create-session rg-session --name rg-session --user ec2-user --owner ec2-user --permissions-file /etc/dcv/secure_desktop.perm
+                dcv list-sessions
+                date
             "/home/ec2-user/.config/autostart/studymount.desktop":
               mode: "000644"
               owner: "ec2-user"
@@ -315,23 +351,29 @@ Resources:
               mode: "000755"
               owner: "ec2-user"
               group: "ec2-user"
-              content: !Sub |
+              content: |
                 #!/bin/bash
                 trap "Error setting user token. You may not be able to access your instance URL"  ERR
                 # Get the session token
                 TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
-                
+
                 # Get the region to build the parameter name
                 region=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/region)
                 echo "Retrieved region ${region} from metadata service"
-                
+
                 # Get the instance id to build the parameter name
                 instance_id=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
                 echo "Retrieved instance_id $instance_id from metadata service"
+
+                session_id="rg-session"
+                auth_token=`uuidgen`
+                parameter_name="/RL/RG/secure-desktop/auth-token/$instance_id"
+                /usr/local/bin/aws ssm put-parameter --name "$parameter_name" --type "String" --value '{"auth_token":"'$auth_token'","session_id":"'$session_id'"}' --region $region --overwrite
+                echo "User token set successfully"
             "/home/ec2-user/supervisor/supervisord.conf":
-              mode: "000644"
-              owner: "ec2-user"
-              group: "ec2-user"
+              mode: "000755"
+              owner: "root"
+              group: "root"
               content: |
                 [unix_http_server]
                 file=/home/ec2-user/supervisor/supervisor.sock   ; the path to the socket file
@@ -355,7 +397,7 @@ Resources:
                 [program:dcv-custom-auth]
                 command=docker run --rm -p 8445:8445 -e PORT=8445 -e PARAMNAMEPREFIX=/RL/RG/secure-desktop/auth-token/ relevancelab/nice-dcv-auth-svc:latest  ; the program (relative uses PATH, can take args)
                 directory=/home/ec2-user                                                                                                            ; directory to cwd to before exec (def no cwd)
-                user=ec2-user                                                                                                                       ; setuid to this UNIX account to run the program
+                user=root                                                                                                                       ; setuid to this UNIX account to run the program
                 redirect_stderr=true                                                                                                                ; redirect proc stderr to stdout (default false)
                 stdout_logfile=/home/ec2-user/supervisor/cust_auth.log
             "/home/ec2-user/supervisor/supervisord.log":
@@ -369,13 +411,28 @@ Resources:
               owner: "ec2-user"
               group: "ec2-user"
             "/home/ec2-user/disable_lock.sh":
-              content: !Sub |
+              content: |
                 #!/bin/bash
+                gsettings set org.gnome.desktop.session idle-delay 0
+                gsettings set org.gnome.desktop.screensaver lock-enabled false
                 gsettings set org.gnome.desktop.lockdown disable-lock-screen 'true'
                 echo "Lock disabled successfully"
               mode: "000755"
               owner: "ec2-user"
-              group: "ec2-user" 
+              group: "ec2-user"
+            "/etc/dconf/db/local.d/00-screensaver":
+              mode: "000755"
+              owner: "root"
+              group: "root"
+              content: |
+                [org/gnome/desktop/session]
+                idle-delay=uint32 0
+
+                [org/gnome/desktop/screensaver]
+                lock-enabled=false
+
+                [org/gnome/desktop/lockdown]
+                disable-lock-screen=true
         config2:
           commands:
             01_start_ext_auth:
@@ -389,7 +446,13 @@ Resources:
               command: "/home/ec2-user/start_rstudio.sh"
             04_start_jupyter:
               cwd: "/home/ec2-user" 
-              command: "/home/ec2-user/start_jupyter.sh"               
+              command: "/home/ec2-user/start_jupyter.sh"    
+            05_start_dcv_session:
+              cwd: "/usr/local/bin"
+              command: "/usr/local/bin/start-dcv-session"
+            06_disable_screensaver:
+              cwd: "/usr/local/bin"
+              command: su - ec2-user -c "/home/ec2-user/disable_lock.sh"          
     Properties:
       LaunchTemplate:
         LaunchTemplateName: "RG-IMDSv2"
@@ -399,9 +462,9 @@ Resources:
           #!/usr/bin/env bash
           exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
           #trap '/opt/aws/bin/cfn-signal --exit-code 1 --resource EC2Instance --region ${AWS::Region} --stack ${AWS::StackName}' ERR
-          yum update -y
-          # Download and install the SSM Agent
-          yum install -y "https://s3.${AWS::Region}.amazonaws.com/amazon-ssm-region/latest/linux_amd64/amazon-ssm-agent.rpm"
+
+          # pull latest custom auth svc
+          docker pull relevancelab/nice-dcv-auth-svc:latest
 
           # Start and enable the SSM Agent
           systemctl start amazon-ssm-agent
@@ -417,49 +480,17 @@ Resources:
 
           # Route auth request to external authenticator and restart dcv
           /usr/local/bin/crudini --set /etc/dcv/dcv.conf security auth-token-verifier \"http://127.0.0.1:8445\"
+          /usr/local/bin/crudini --set /etc/dcv/dcv.conf session-management disable-session-lock true
           
-          sudo systemctl restart dcvserver
-
-          # Create dcv session start script
-          cat << 'EOF' > /usr/local/bin/start-dcv-session
-           #!/bin/bash
-            service_name="dcvserver"
-            timeout=20
-            elapsed_time=0
-
-            echo "Waiting for $service_name to become active..."
-
-            while true; do
-            status=$(systemctl is-active $service_name)
-            if [[ $status == "active" ]]; then
-              echo "$service_name is now active."
-              break
-            fi
-
-            if [[ $elapsed_time -ge $timeout ]]; then
-              echo "Timeout: $service_name did not become active within $timeout seconds."
-              break
-            fi
-
-            sleep 1
-            elapsed_time=$((elapsed_time+1))
-            done
-          dcv create-session rg-session --name rg-session --user ec2-user --owner ec2-user --permissions-file /etc/dcv/secure_desktop.perm
-          dcv list-sessions
-          date
-          EOF
-
-          # Create dcv session on reboot
-          chown root: "/usr/local/bin/start-dcv-session"
-          chmod 775 "/usr/local/bin/start-dcv-session"
-          sh "/usr/local/bin/start-dcv-session"
+          sudo systemctl restart dcvserver       
 
           sleep 5
 
           # Run init script to create files
           /usr/local/bin/cfn-init --verbose --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
-
+          dconf update
           # Add command to start on reboot
+          echo "add command to start on reboot"
           crontab -l 2>/dev/null > "/tmp/crontab"
           sh "/usr/local/bin/start-dcv-session"
           echo '@reboot cd /home/ec2-user/supervisor && /usr/local/bin/supervisord 2>&1 >> /home/ec2-user/supervisor/cust_auth.log' >> "/tmp/crontab"
@@ -469,16 +500,12 @@ Resources:
           echo '@reboot /home/ec2-user/start_jupyter.sh' >> "/tmp/crontab"
           crontab "/tmp/crontab"
 
-
-          # # Restart DCV session to start dcv-session
-          # dcv close-session rg-session
-          # sh "/usr/local/bin/start-dcv-session"
-
           # Remove password and lock for ec2-user
+          echo "remove password for ec2-user"
           passwd -l ec2-user
           dcv create-session lock-session --name lock-session --user ec2-user --owner ec2-user --init /home/ec2-user/disable_lock.sh
 
-
+          echo "signal cfn to last exit code $?"
           /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}          
       InstanceType: !Ref 'InstanceType'
       ImageId: "{{resolve:ssm:/RL/RG/StandardCatalog/rhelinux-nice-dcv-ami}}"
@@ -556,3 +583,4 @@ Outputs:
   AvailabilityZone: 
     Description: AvailabilityZone of newly created EC2 instance
     Value: !GetAtt [EC2Instance, AvailabilityZone]    
+
