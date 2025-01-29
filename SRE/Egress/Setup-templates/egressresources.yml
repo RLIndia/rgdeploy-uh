@@ -11,7 +11,7 @@ Parameters:
   RGDomain:
     Type: String
     Description: RG Domain that will access the Egress Store
-    AllowedPattern: "*"
+    AllowedPattern: ".*"
 Resources:
   EgressAccessLogsBucketKMSKey:
     Type: AWS::KMS::Key
@@ -130,14 +130,14 @@ Resources:
   EgressStoreEncryptionKeyAlias:
     Type: AWS::KMS::Alias
     Properties:
-      AliasName: !Sub "alias/${AWS::AccountId}-rg/s3/egressstorever"
+      AliasName: !Sub "alias/${AWS::AccountId}-rg/s3/egressstore"
       TargetKeyId: !Ref EgressStoreEncryptionKey
 
   # S3 bucket used to store egress data from workspace
   EgressStoreBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "${AWS::AccountId}-rg-egress-storever"
+      BucketName: !Sub "${AWS::AccountId}-rg-egress-store"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -205,7 +205,7 @@ Resources:
   EgressNotificationBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "${AWS::AccountId}-rg-egress-notification-bucketver"
+      BucketName: !Sub "${AWS::AccountId}-rg-egress-notification-bucket"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -269,4 +269,31 @@ Resources:
             Condition:
               StringNotEquals:
                 s3:signatureversion: "AWS4-HMAC-SHA256"
+Outputs:
+  EgressStoreBucketArn:
+    Description: ARN of the Egress Store Bucket
+    Value: !GetAtt EgressStoreBucket.Arn
+
+  EgressStoreKmsArn:
+    Description: ARN of the KMS key used for Egress Store Bucket encryption
+    Value: !GetAtt EgressStoreEncryptionKey.Arn
+
+  EgressStoreBucketName:
+    Description: Name of the Egress Store Bucket
+    Value: !Ref EgressStoreBucket
+
+  EgressStoreNotificationBucketName:
+    Description: Name of the Egress Notification Bucket
+    Value: !Ref EgressNotificationBucket
+
+  EgressStoreName:
+    Description: Stack name, used as the Egress Store Name
+    Value: !Ref AWS::StackName
+
+  Region:
+    Description: Region where the stack is deployed
+    Value: !Ref AWS::Region
+
+
+
 

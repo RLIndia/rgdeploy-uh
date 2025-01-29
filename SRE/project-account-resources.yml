@@ -37,7 +37,7 @@ Resources:
       BucketName:
         !Join 
           - "-"
-          - - "rg-project-account-accesslogs"
+          - - "rg-qa2-project-account-accesslogs"
             - !Ref "AWS::AccountId"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -61,8 +61,22 @@ Resources:
           - Sid: ELB-Account-Allow
             Effect: Allow
             Principal:
-              AWS: "arn:aws:iam::033677994240:root"
+              AWS: "arn:aws:iam::127311923021:root"
             Action: "s3:PutObject"
+            Resource: !Sub "arn:aws:s3:::${ProjectAccountAccessLogsBucket}/*"
+          - Sid: RG-Project-ALB-AccessLogsPolicy
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${ProjectAccountAccessLogsBucket}/RG-Project-ALB/*"
+            Principal:
+              Service: 'elasticloadbalancing.amazonaws.com'
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Sub "${AWS::AccountId}"
+              ArnLike:
+                "aws:SourceArn": !Sub "arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:loadbalancer/app/RG-Project-ALB/*"
+
           - Sid: S3ServerAccessLogsPolicy-DeploymentBucket
             Action:
               - "s3:PutObject"
