@@ -7,8 +7,8 @@
             "secretKey": ""
         },
         "region": "us-east-1",
-        "fromAddress": "rlc.support@relevancelab.com",
-        "toAddress": ["rlc.support@relevancelab.com"],
+        "fromAddress": "AWS-SREsupport-donotreply@med.miami.edu",
+        "toAddress": ["AWS-SREsupport-donotreply@med.miami.edu"],
         "ccAddress": []
     }
 }
