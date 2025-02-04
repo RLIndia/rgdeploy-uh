@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to create an AWS SNS Topic with a custom access policy and tags.
+
+Parameters:
+  MainAccount:
+    Type: String
+    Description: Main AWS Account ID
+  ProjectAccount:
+    Type: String
+    Description: Project AWS Account ID
+
+Resources:
+  ResearchProductEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: Research-Product-Events
+      Tags:
+        - Key: CostCenter
+          Value: PG000000
+        - Key: CriticalityTier
+          Value: "Business Operational"
+        - Key: Compliance
+          Value: HIPAA
+        - Key: Environment
+          Value: PROD
+        - Key: ApplicationName
+          Value: ResearchGatewayProd
+        - Key: Department
+          Value: DataScience
+        - Key: ApplicationCustodian
+          Value: txs908
+        - Key: ServiceNow
+          Value: XXX
+        - Key: DepartmentEmail
+          Value: txs908@miami.edu
+        - Key: UHITOwner
+          Value: txs908
+
+  ResearchProductEventsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref ResearchProductEventsTopic
+      PolicyDocument:
+        Version: '2008-10-17'
+        Id: "__default_policy_ID"
+        Statement:
+          - Sid: "Allow_Permission_To_Lambda"
+            Effect: Allow
+            Principal:
+              AWS: !Ref MainAccount
+            Action:
+              - SNS:Publish
+              - SNS:RemovePermission
+              - SNS:SetTopicAttributes
+              - SNS:DeleteTopic
+              - SNS:ListSubscriptionsByTopic
+              - SNS:GetTopicAttributes
+              - SNS:AddPermission
+              - SNS:Subscribe
+            Resource: !Sub "arn:aws:sns:us-east-1:${MainAccount}:Research-Product-Events"
+          - Sid: "__default_statement_ID"
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - SNS:Publish
+              - SNS:RemovePermission
+              - SNS:SetTopicAttributes
+              - SNS:DeleteTopic
+              - SNS:ListSubscriptionsByTopic
+              - SNS:GetTopicAttributes
+              - SNS:AddPermission
+              - SNS:Subscribe
+            Resource: !Sub "arn:aws:sns:us-east-1:${ProjectAccount}:Research-Product-Events"
