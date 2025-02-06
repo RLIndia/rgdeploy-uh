@@ -112,10 +112,65 @@ check_and_create_stack "RG-Lambda-Deployment" "lambda-deployment.yaml" "--parame
 
 #########################################################################################
 # Deploy SNS Topic Stack
-check_and_create_stack "RG-SNS-Topic" "sns-topic.yaml" "--parameters ParameterKey=MainAccount,ParameterValue=$MAIN_ACCOUNT_ID ParameterKey=ProjectAccount,ParameterValue=$PROJECT_ACCOUNT_ID"
+check_and_create_stack "RG-SNS-Topic" "snstopic.yaml" "--parameters ParameterKey=MainAccount,ParameterValue=$MAIN_ACCOUNT_ID ParameterKey=ProjectAccount,ParameterValue=$PROJECT_ACCOUNT_ID"
 
 #########################################################################################
 # Deploy Template Version Stack
 check_and_create_stack "RG-Template-Version" "launchtemplate.yaml" ""
 
-echo "🎉 Deployment completed successfully!"
+echo "🎉 RG Project Account resources Deployment completed successfully!"
+
+# Initialize an empty array for stack names
+STACK_NAMES=()
+
+# Extract stack names dynamically from the script where stacks are created
+while IFS= read -r line; do
+    if [[ $line =~ aws\ cloudformation\ (create-stack|deploy).*--stack-name\ ([^[:space:]]+) ]]; then
+        STACK_NAMES+=("${BASH_REMATCH[2]}")
+    fi
+done < "$0"  # Reads the current script itself
+
+# Check if any stack names were found
+if [[ ${#STACK_NAMES[@]} -eq 0 ]]; then
+    echo "No stack names found in the script."
+    exit 1
+fi
+
+echo -e "\nStacks found in the script:"
+printf "%s\n" "${STACK_NAMES[@]}"
+
+# Initialize JSON output file
+OUTPUT_FILE="output.json"
+echo "[]" > "$OUTPUT_FILE"
+
+# Loop through each stack name and fetch outputs
+for STACK_NAME in "${STACK_NAMES[@]}"; do
+    echo -e "\nFetching CloudFormation Stack Outputs for stack: $STACK_NAME"
+
+    # Get stack outputs in JSON format
+    STACK_OUTPUTS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs" --output json 2>/dev/null)
+
+    # Check if AWS CLI command was successful
+    if [[ $? -ne 0 ]]; then
+        echo "Error fetching outputs for stack: $STACK_NAME. Skipping..."
+        continue
+    fi
+
+    # Check if there are outputs
+    if [[ -z "$STACK_OUTPUTS" || "$STACK_OUTPUTS" == "[]" ]]; then
+        echo "No outputs found for stack: $STACK_NAME."
+    else
+        echo -e "\nCloudFormation Stack Outputs for $STACK_NAME:"
+        echo "--------------------------------------------------"
+        echo -e "OutputKey		OutputValue"
+        echo "--------------------------------------------------"
+        
+        echo "$STACK_OUTPUTS" | jq -r '.[] | "\(.OutputKey)		\(.OutputValue)"'
+
+        # Append outputs to JSON file
+        jq --argjson new "$STACK_OUTPUTS" '. + $new' "$OUTPUT_FILE" > tmp.json && mv tmp.json "$OUTPUT_FILE"
+    fi
+done
+
+echo -e "\nCloudFormation outputs have been saved to $OUTPUT_FILE"
+
