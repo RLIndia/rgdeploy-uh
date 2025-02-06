@@ -1,14 +1,8 @@
 #!/bin/bash
 
-# Ensure that two arguments (MainAccountID and ProjectAccountID) are passed
-if [[ $# -ne 2 ]]; then
-    echo "❌ Usage: $0 <Main AWS Account ID> <Project AWS Account ID>"
-    exit 1
-fi
 
-# Assign input arguments to variables
-MAIN_ACCOUNT_ID=$1
-PROJECT_ACCOUNT_ID=$2
+localhome=$(pwd)
+
 
 # Set AWS Region (Modify if needed)
 AWS_REGION="us-east-1"
@@ -16,6 +10,7 @@ AWS_REGION="us-east-1"
 # User Input for Main and Project Account IDs
 read -p "Enter Main AWS Account ID: " MAIN_ACCOUNT_ID
 read -p "Enter Project AWS Account ID: " PROJECT_ACCOUNT_ID
+
 
 # Fetch the VPC ID from The Project Account
 VPC_ID=$(aws ec2 describe-vpcs --query "Vpcs[0].VpcId" --output text --region $AWS_REGION)
@@ -36,7 +31,7 @@ STACK_NAME="RG-Network-SecurityGroup"
 echo "🚀 Deploying CloudFormation stack: $STACK_NAME..."
 aws cloudformation create-stack \
     --stack-name "$STACK_NAME" \
-    --template-body file://$HOME/Project-onboarding/QA/networksg.yaml \
+    --template-body file://$localhome/Project-onboarding/QA/networksg.yaml \
     --parameters ParameterKey=VpcId,ParameterValue=$VPC_ID \
                  ParameterKey=MainAccount,ParameterValue=$MAIN_ACCOUNT_ID \
                  ParameterKey=ProjectAccount,ParameterValue=$PROJECT_ACCOUNT_ID \
@@ -104,7 +99,7 @@ fi
 echo "✅ S3 bucket $S3_BUCKET created successfully!"
 
 # Upload ZIP file to S3 (Modify ZIP file name as required)
-ZIP_FILE="/$home//SRE/Egress/egress-zip-copy.zip"
+ZIP_FILE="/$localhome/egress-zip-copy.zip"
 
 if [[ -f "$ZIP_FILE" ]]; then
     echo "🚀 Uploading ZIP file to S3..."
@@ -123,7 +118,7 @@ EGRESS_STACK_NAME="RG-Egress-Resources"
 echo "🚀 Deploying CloudFormation stack: $EGRESS_STACK_NAME..."
 aws cloudformation create-stack \
     --stack-name "$EGRESS_STACK_NAME" \
-    --template-body file://$HOME/Project-onboarding/PROD/egressresource.yaml \
+    --template-body file://$localhome/egressresource.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
     --region $AWS_REGION
 
@@ -154,7 +149,7 @@ LAMBDA_STACK_NAME="RG-Lambda-Deployment"
 echo "🚀 Deploying CloudFormation stack: $LAMBDA_STACK_NAME..."
 aws cloudformation create-stack \
     --stack-name "$LAMBDA_STACK_NAME" \
-    --template-body file://$HOME/Project-onboarding/PROD/lambda-deployment.yaml \
+    --template-body file://$localhome/lambda-deployment.yaml \
     --parameters ParameterKey=LambdaFunctionName,ParameterValue=egress-zip-copy \
                  ParameterKey=S3BucketName,ParameterValue=$S3_BUCKET \
                  ParameterKey=S3ObjectKey,ParameterValue=egress-zip-copy.zip \
@@ -188,7 +183,7 @@ SNS_STACK_NAME="RG-SNS-Topic"
 echo "🚀 Deploying CloudFormation stack: $SNS_STACK_NAME..."
 aws cloudformation create-stack \
     --stack-name "$SNS_STACK_NAME" \
-    --template-body file://$HOME/Project-onboarding/PROD/sns-topic.yaml \
+    --template-body file://$localhome/sns-topic.yaml \
     --parameters ParameterKey=MainAccount,ParameterValue=$MAIN_ACCOUNT_ID \
                  ParameterKey=ProjectAccount,ParameterValue=$PROJECT_ACCOUNT_ID \
     --capabilities CAPABILITY_NAMED_IAM \
@@ -209,7 +204,7 @@ TEMPLATE_STACK_NAME="RG-Template-Version"
 echo "Deploying CloudFormation stack: $TEMPLATE_STACK_NAME..."
 aws cloudformation create-stack \
     --stack-name "$TEMPLATE_STACK_NAME" \
-    --template-body file://$HOME/Project-onboarding/PROD/launchtemplate.yaml \
+    --template-body file://$localhome/launchtemplate.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
     --region $AWS_REGION
 
