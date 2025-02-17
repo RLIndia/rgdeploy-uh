@@ -83,10 +83,10 @@ Resources:
       AuthType: AWS_IAM
 Outputs:
   LambdaFunctionArn:
-    Description: ARN of the Lambda function
+    Description: egressStoreLambdaARN 
     Value: !GetAtt LambdaFunction.Arn
     Export:
       Name: LambdaFunctionArn
   FunctionUrl:
-    Description: Lambda Function Url
+    Description: egressStoreLambdaURL 
     Value: !GetAtt LambdaFunctionUrl.FunctionUrl
