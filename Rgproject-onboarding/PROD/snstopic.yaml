@@ -24,7 +24,7 @@ Resources:
         - Key: Environment
           Value: PROD
         - Key: ApplicationName
-          Value: ResearchGatewayProd
+          Value: ResearchGatewayPROD
         - Key: Department
           Value: DataScience
         - Key: ApplicationCustodian

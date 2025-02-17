@@ -9,7 +9,7 @@ localhome=$(pwd)
 AWS_REGION="us-east-1"
 
 # Fixed Main AWS Account ID
-MAIN_ACCOUNT_ID="533266995550"
+MAIN_ACCOUNT_ID="730335491778"
 
 # Get Project AWS Account ID dynamically
 PROJECT_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
