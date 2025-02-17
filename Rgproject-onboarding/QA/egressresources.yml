@@ -7,11 +7,6 @@
 
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Provision all the required resources for TRE Egress application setup in RG.
-Parameters:
-  RGDomain:
-    Type: String
-    Description: RG Domain that will access the Egress Store
-    AllowedPattern: ".*"
 Resources:
   EgressAccessLogsBucketKMSKey:
     Type: AWS::KMS::Key
@@ -151,14 +146,6 @@ Resources:
         LogFilePrefix: egressStore/
       VersioningConfiguration:
         Status: Enabled
-      CorsConfiguration:
-        CorsRules:
-          - AllowedOrigins:
-              - !Ref RGDomain 
-            AllowedMethods:
-              - POST
-            ExposedHeaders:
-              - ETag
       PublicAccessBlockConfiguration: # Block all public access configuration for the S3 bucket
         BlockPublicAcls: true
         BlockPublicPolicy: true

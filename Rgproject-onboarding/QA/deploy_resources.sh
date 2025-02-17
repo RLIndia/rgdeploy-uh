@@ -1,16 +1,21 @@
 #!/bin/bash
 
 set -e  # Exit immediately if any command fails
+start_time=$(date +%s)
 
 localhome=$(pwd)
 
 # Automatically detect AWS Region
 AWS_REGION="us-east-1"
 
+# Fixed Main AWS Account ID
+MAIN_ACCOUNT_ID="18272783600"
 
-# User Input for Main and Project Account IDs
-read -p "Enter Main AWS Account ID: " MAIN_ACCOUNT_ID
-read -p "Enter Project AWS Account ID: " PROJECT_ACCOUNT_ID
+# Get Project AWS Account ID dynamically
+PROJECT_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+
+echo "✅ Using Main Account ID: $MAIN_ACCOUNT_ID"
+echo "✅ Using Project Account ID: $PROJECT_ACCOUNT_ID"
 
 # Fetch the VPC ID from the Project Account
 VPC_ID=$(aws ec2 describe-vpcs --query "Vpcs[0].VpcId" --output text --region $AWS_REGION 2>/dev/null)
@@ -23,6 +28,45 @@ fi
 echo "✅ VPC ID Retrieved: $VPC_ID"
 
 #########################################################################################
+
+#########################################################################################
+# Function to select three private subnets from different Availability Zones
+select_private_subnets() {
+    declare -A SELECTED_SUBNETS
+    local SUBNETS_INFO
+    SUBNETS_INFO=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=false" --query "Subnets[*].[SubnetId, AvailabilityZone]" --output text --region $AWS_REGION)
+
+    if [[ -z "$SUBNETS_INFO" ]]; then
+        echo "❌ ERROR: No private subnets found in the VPC. Exiting..."
+        exit 1
+    fi
+
+    while read -r SUBNET_ID AZ; do
+        if [[ -z "${SELECTED_SUBNETS[$AZ]}" ]]; then
+            SELECTED_SUBNETS[$AZ]="$SUBNET_ID"
+        fi
+        if [[ ${#SELECTED_SUBNETS[@]} -ge 3 ]]; then
+            break  # Stop once we have three distinct AZs
+        fi
+    done <<< "$SUBNETS_INFO"
+
+    echo "${SELECTED_SUBNETS[@]}"
+}
+
+# Select three private subnets from different AZs
+PRIVATE_SUBNETS=($(select_private_subnets))
+
+# Validate we have enough subnets
+if [[ ${#PRIVATE_SUBNETS[@]} -lt 3 ]]; then
+    echo "❌ ERROR: Less than three private subnets found. Need at least three distinct AZs."
+    exit 1
+fi
+
+PRIVATE_SUBNET1="${PRIVATE_SUBNETS[0]}"
+PRIVATE_SUBNET2="${PRIVATE_SUBNETS[1]}"
+PRIVATE_SUBNET3="${PRIVATE_SUBNETS[2]}"
+
+
 # Function to check stack status and skip already completed stacks
 check_and_create_stack() {
     local STACK_NAME=$1
@@ -60,7 +104,7 @@ check_and_create_stack "RG-Network-SecurityGroup" "networksg.yaml" "--parameters
 
 #########################################################################################
 # Fetch Network Details and Save as JSON
-PRIVATE_SUBNET_IDS=($(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=false" --query "Subnets[*].SubnetId" --output text --region $AWS_REGION))
+#PRIVATE_SUBNET_IDS=($(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=false" --query "Subnets[*].SubnetId" --output text --region $AWS_REGION))
 ENTRYPOINT_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=entrypointSG" --query "SecurityGroups[0].GroupId" --output text --region $AWS_REGION)
 WORKSPACE_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=workspaceSG" --query "SecurityGroups[0].GroupId" --output text --region $AWS_REGION)
 INTERFACE_ENDPOINT_SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=interfaceEndpointSG" --query "SecurityGroups[0].GroupId" --output text --region $AWS_REGION)
@@ -68,9 +112,9 @@ INTERFACE_ENDPOINT_SG=$(aws ec2 describe-security-groups --filters "Name=group-n
 cat <<EOF > network.json
 {
   "vpc": "$VPC_ID",
-  "publicSubnet1": "${PRIVATE_SUBNET_IDS[0]:-N/A}",
-  "publicSubnet2": "${PRIVATE_SUBNET_IDS[1]:-N/A}",
-  "privateSubnet": "${PRIVATE_SUBNET_IDS[2]:-N/A}",
+  "publicSubnet1": "$PRIVATE_SUBNET1",
+  "publicSubnet2": "$PRIVATE_SUBNET2",
+  "privateSubnet": "$PRIVATE_SUBNET3",
   "entryPointSG": "$ENTRYPOINT_SG",
   "workspaceSG": "$WORKSPACE_SG",
   "interfaceEndpointSG": "$INTERFACE_ENDPOINT_SG"
@@ -104,11 +148,27 @@ fi
 
 #########################################################################################
 # Deploy Egress Resources Stack
-check_and_create_stack "RG-Egress-Resources" "egressresource.yaml" ""
+check_and_create_stack "RG-Egress-Resources" "egressresources.yml" ""
 
 #########################################################################################
 # Deploy Lambda Stack
 check_and_create_stack "RG-Lambda-Deployment" "lambda-deployment.yaml" "--parameters ParameterKey=LambdaFunctionName,ParameterValue=egress-zip-copy ParameterKey=S3BucketName,ParameterValue=$S3_BUCKET ParameterKey=S3ObjectKey,ParameterValue=egress-zip-copy.zip"
+
+#########################################################################################
+# Fetch Outputs of Egress Resources and Lambda Deployment Stacks
+EGRESS_OUTPUTS=$(aws cloudformation describe-stacks --stack-name "RG-Egress-Resources" --query "Stacks[0].Outputs" --output json --region $AWS_REGION)
+LAMBDA_OUTPUTS=$(aws cloudformation describe-stacks --stack-name "RG-Lambda-Deployment" --query "Stacks[0].Outputs" --output json --region $AWS_REGION)
+
+# Store details in egress.json
+cat <<EOF > egress.json
+{
+  "EgressResourcesOutputs": $EGRESS_OUTPUTS,
+  "LambdaDeploymentOutputs": $LAMBDA_OUTPUTS
+}
+EOF
+
+echo "✅ Egress details saved in egress.json"
+cat egress.json
 
 #########################################################################################
 # Deploy SNS Topic Stack
@@ -118,59 +178,8 @@ check_and_create_stack "RG-SNS-Topic" "snstopic.yaml" "--parameters ParameterKey
 # Deploy Template Version Stack
 check_and_create_stack "RG-Template-Version" "launchtemplate.yaml" ""
 
-echo "🎉 RG Project Account resources Deployment completed successfully!"
+end_time=$(date +%s)
+execution_time=$((end_time - start_time))
 
-# Initialize an empty array for stack names
-STACK_NAMES=()
-
-# Extract stack names dynamically from the script where stacks are created
-while IFS= read -r line; do
-    if [[ $line =~ aws\ cloudformation\ (create-stack|deploy).*--stack-name\ ([^[:space:]]+) ]]; then
-        STACK_NAMES+=("${BASH_REMATCH[2]}")
-    fi
-done < "$0"  # Reads the current script itself
-
-# Check if any stack names were found
-if [[ ${#STACK_NAMES[@]} -eq 0 ]]; then
-    echo "No stack names found in the script."
-    exit 1
-fi
-
-echo -e "\nStacks found in the script:"
-printf "%s\n" "${STACK_NAMES[@]}"
-
-# Initialize JSON output file
-OUTPUT_FILE="output.json"
-echo "[]" > "$OUTPUT_FILE"
-
-# Loop through each stack name and fetch outputs
-for STACK_NAME in "${STACK_NAMES[@]}"; do
-    echo -e "\nFetching CloudFormation Stack Outputs for stack: $STACK_NAME"
-
-    # Get stack outputs in JSON format
-    STACK_OUTPUTS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs" --output json 2>/dev/null)
-
-    # Check if AWS CLI command was successful
-    if [[ $? -ne 0 ]]; then
-        echo "Error fetching outputs for stack: $STACK_NAME. Skipping..."
-        continue
-    fi
-
-    # Check if there are outputs
-    if [[ -z "$STACK_OUTPUTS" || "$STACK_OUTPUTS" == "[]" ]]; then
-        echo "No outputs found for stack: $STACK_NAME."
-    else
-        echo -e "\nCloudFormation Stack Outputs for $STACK_NAME:"
-        echo "--------------------------------------------------"
-        echo -e "OutputKey		OutputValue"
-        echo "--------------------------------------------------"
-        
-        echo "$STACK_OUTPUTS" | jq -r '.[] | "\(.OutputKey)		\(.OutputValue)"'
-
-        # Append outputs to JSON file
-        jq --argjson new "$STACK_OUTPUTS" '. + $new' "$OUTPUT_FILE" > tmp.json && mv tmp.json "$OUTPUT_FILE"
-    fi
-done
-
-echo -e "\nCloudFormation outputs have been saved to $OUTPUT_FILE"
-
+echo "🎉 RG Project Account resources Creation completed successfully!"
+echo "⏳ Total Execution Time: $execution_time seconds"
