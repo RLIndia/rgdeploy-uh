@@ -2,9 +2,9 @@
 
 ## Introduction
 
-Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guide is designed to provide documentation for users who will be onboarding a new project account on the Research Gateway product.
+Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guide provides documentation for onboarding a new project account on the Research Gateway product.
 
-## 1. VPC Association & Resources Creation
+## Step-1. VPC Association & Resources Creation
 
 ### Pre-requisites:
 
@@ -16,7 +16,7 @@ b. VPC ID of the Newly Created Project Account
 
 ### A. Associate VPC with Hosted Zone
 
-Run the below commands on the RG Deployed Account from the Cloud Shell service:
+Run the following commands on the RG Deployed Account from the Cloud Shell service:
 
 1. List hosted zones:
    ```sh
@@ -53,49 +53,114 @@ Run the below commands on the RG Deployed Account from the Cloud Shell service:
 
 ### B. Associate Project Account Transit Gateway Attachment ID to the Network Account
 
-Attaching the transit gateway attachment ID of a child account to the network account in AWS is essential for enabling secure and centralized network connectivity.
+Associating the transit gateway attachment ID of a child account with the network account in AWS ensures secure and centralized network connectivity.
 
 ---
 
-## 2. Create ACM Certificate
+## Step-2. Create ACM Certificate
 
 ### Steps:
 
 1. **Prepare Certificate Files:**
-   - Ensure we have the following files ready from the network team (`.pfx` or `.pem` source):
+   - Ensure the following files from the network team are available (`.pfx` or `.pem` source):
      - **Certificate Body**
      - **Private Key**
      - **Certificate Chain**
 
 2. **Enter Certificate Details:**
-   - In the **Certificate Body** field, paste the contents of your certificate body file (e.g., `certificate.crt`).
-   - In the **Certificate Private Key** field, paste the contents of your private key file (e.g., `privatekey.pem`).
-   - In the **Certificate Chain** field, paste the contents of your certificate chain file (e.g., `certificate_chain.pem`).
-   - The certificate chain typically includes intermediate and root certificates in the order provided by your certificate authority (CA).
+   - In the **Certificate Body** field, paste the contents of `certificate.crt`.
+   - In the **Certificate Private Key** field, paste the contents of `privatekey.pem`.
+   - In the **Certificate Chain** field, paste the contents of `certificate_chain.pem` (including intermediate and root certificates in order provided by the CA).
 
 3. **Review and Import:**
-   - After pasting all the contents, click **Next**.
-   - Review your entries, and if everything looks correct, click **Import**.
+   - Click **Next** after pasting all contents.
+   - Review the entries and click **Import** if everything is correct.
 
 ---
 
-## 3. Create RG User
+## Step-3. Create RG User
 
-When creating a new account on RG, we need to pass access keys and a secret key. Follow these steps:
+When setting up a new account on RG, access keys and a secret key must be passed. Follow these steps:
 
 ### Sign in to the AWS Management Console from the Project Account:
 
 1. **Go to the IAM Console.**
 2. **Create a New User:**
-   - In the IAM Console, go to **Users** and select **Add Users**.
+   - Navigate to **Users** and select **Add Users**.
    - Enter a **Username** for the new user.
 3. **Set User Permissions:**
    - Under **Set Permissions**, select **Attach Policies Directly**.
-   - In the list of policies, search for `AdministratorAccess`.
+   - Search for and select `AdministratorAccess`.
 4. **Review and Create User:**
-   - Review the settings, then click **Create User**.
+   - Review the settings and click **Create User**.
 5. **Download Access and Secret Keys:**
-   - Click on the created user and navigate to **Security Credentials**.
-   - Select **Create Access Keys**, choose **Other** as the option, and enter a description for the keys.
-   - The access keys will then be generated—save them securely.
+   - Click on the created user and go to **Security Credentials**.
+   - Select **Create Access Keys**, choose **Other**, and enter a description.
+   - Securely save the generated access keys.
+
+---
+
+## Step-4. KMS Policy Update for AMI Copy to Project Accounts
+
+When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Main Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
+
+### Steps to Add Project Account to KMS Policy:
+
+1. **Navigate to the KMS Console in the RG Deployed Account.**
+2. **Select the Customer Managed Key associated with EBS encryption.**
+   - KMS Key Name: `accelerator/ebs/default-encryption/key`
+3. **Edit Key Policy.**
+4. **Modify the Principal Section to Include the Project Account ARN:**
+   ```json
+   {
+       "Effect": "Allow",
+       "Principal": { "AWS": "arn:aws:iam::<PROJECT_ACCOUNT_ID>:root" },
+       "Action": "kms:*",
+       "Resource": "*"
+   }
+   ```
+5. **Save the Updated Policy.**
+6. **Verify Permissions by Testing Access in the Project Account.**
+
+---
+
+## Step-5. Modify RG Deploy Template Bucket Policy
+
+After successfully setting up a new account in RG, update the bucket policy before project creation:
+
+1. **Log in to the RG Main Account via AWS Console.**
+2. **Select the RG Deployed Template Bucket:**
+   - QA: `rgqa-sec-templates1`
+   - Prod: `rgprod-cft-template`
+3. **Modify the Existing Bucket Policy to Include the Project Account.**
+4. **Save the Changes.**
+
+---
+
+## Step-6. Run Deploy Resources Script
+
+To create network security groups, egress resources, Lambda, and launch templates:
+
+1. **Log in to AWS and open CloudShell.**
+2. **Clone the repository:**
+   ```sh
+   git clone https://github.com/RLIndia/rgdeploy-uh.git
+   ```
+3. **Navigate to the Project Onboarding Directory:**
+   ```sh
+   cd rgdeploy-uh/Rgproject-onboarding
+   ```
+4. **Switch to the Environment Folder (e.g., QA):**
+   ```sh
+   cd QA
+   ```
+5. **Make the Deployment Script Executable:**
+   ```sh
+   chmod +x deploy_resources.sh
+   ```
+6. **Run the Deployment Script:**
+   ```sh
+   ./deploy_resources.sh
+   ```
+7. **Confirm That the Required Resources Are Created.**
 
