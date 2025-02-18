@@ -133,7 +133,149 @@ After successfully setting up a new account in RG, update the bucket policy befo
    - QA: `rgqa-sec-templates1`
    - Prod: `rgprod-cft-template`
 3. **Modify the Existing Bucket Policy to Include the Project Account.**
-4. **Save the Changes.**
+
+4. **Sample bucket policy.**
+```json
+{ 
+
+    "Version": "2012-10-17", 
+
+    "Statement": [ 
+
+        { 
+
+            "Sid": "Get:Artifacts", 
+
+            "Effect": "Allow", 
+
+            "Principal": { 
+
+                "AWS": [ 
+
+                    "arn:aws:iam::418272783600:role/RG-Portal-ProjectRole-PROD-zzyi", 
+
+                    "arn:aws:iam::381492012479:role/RG-Portal-ProjectRole-PROD-zzyi" 
+
+                ] 
+
+            }, 
+
+            "Action": "s3:GetObject", 
+
+            "Resource": "arn:aws:s3:::rgprod-cft-template/*" 
+
+        }, 
+
+        { 
+
+            "Sid": "Get:BootstrapScripts", 
+
+            "Effect": "Allow", 
+
+            "Principal": { 
+
+                "AWS": [ 
+
+                    "arn:aws:iam::418272783600:root", 
+
+                    "arn:aws:iam::381492012479:root" 
+
+                ] 
+
+            }, 
+
+            "Action": "s3:GetObject", 
+
+            "Resource": "arn:aws:s3:::rgprod-cft-template/bootstrap-scripts/*" 
+
+        }, 
+
+        { 
+
+            "Sid": "List:BootstrapScripts", 
+
+            "Effect": "Allow", 
+
+            "Principal": { 
+
+                "AWS": [ 
+
+                    "arn:aws:iam::418272783600:root", 
+
+                    "arn:aws:iam::381492012479:root" 
+
+                ] 
+
+            }, 
+
+            "Action": "s3:ListBucket", 
+
+            "Resource": "arn:aws:s3:::rgprod-cft-template", 
+
+            "Condition": { 
+
+                "StringLike": { 
+
+                    "s3:prefix": "bootstrap-scripts*" 
+
+                } 
+
+            } 
+
+        }, 
+
+        { 
+
+            "Sid": "Deny requests that do not use TLS", 
+
+            "Effect": "Deny", 
+
+            "Principal": "*", 
+
+            "Action": "s3:*", 
+
+            "Resource": "arn:aws:s3:::rgprod-cft-template/*", 
+
+            "Condition": { 
+
+                "Bool": { 
+
+                    "aws:SecureTransport": "false" 
+
+                } 
+
+            } 
+
+        }, 
+
+        { 
+
+            "Sid": "Deny requests that do not use SigV4", 
+
+            "Effect": "Deny", 
+
+            "Principal": "*", 
+
+            "Action": "s3:*", 
+
+            "Resource": "arn:aws:s3:::rgprod-cft-template/*", 
+
+            "Condition": { 
+
+                "StringNotEquals": { 
+
+                    "s3:signatureversion": "AWS4-HMAC-SHA256" 
+
+                } 
+
+            } 
+
+        } 
+
+    ] 
+
+} 
+```
 
 ---
 
