@@ -162,5 +162,5 @@ To create network security groups, egress resources, Lambda, and launch template
    ```sh
    ./deploy_resources.sh
    ```
-7. **Confirm That the Required Resources Are Created.**
+7. **it will create RG network details and store those details under network.json under same folder and egress details were stored under egress.json file**
 
