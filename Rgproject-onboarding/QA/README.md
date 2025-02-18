@@ -164,3 +164,49 @@ To create network security groups, egress resources, Lambda, and launch template
    ```
 7. **it will create RG network details and store those details under network.json under same folder and egress details were stored under egress.json file**
 
+---
+
+## Step-7: Add KMS Policy to Project Role in the Project Account
+
+After onboarding a new account on RG with the above steps, a new IAM role is created in the project account. We need to add a KMS policy to that role by following these steps:
+
+### 1. Log in to the Project Account from the AWS Management Console
+
+- Navigate to the **IAM** service and select **Roles**.
+- Search for the project role with the prefix: `RG-Portal-ProjectRole`.
+- Once the role is located, select the role to open its details.
+
+### 2. Add a Permission 
+
+- Click on **Add permissions** and select **Create inline policy**.
+- Copy and paste the following policy block to enable access to the KMS key:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "kms:DescribeKey",
+                "kms:ReEncrypt*",
+                "kms:CreateGrant",
+                "kms:Decrypt"
+            ],
+            "Resource": [
+                "arn:aws:kms:us-east-1:533266995550:key/<KeyID>"
+            ]
+        }
+    ]
+}
+
+
+
+3. Retrieve the KMS Key ARN from the Main Account
+
+    Go to AWS Key Management Service (KMS) in the Main Account.
+    Locate the Customer Managed Key designated for EBS encryption and copy its ARN.
+
+
+
+
