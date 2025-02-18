@@ -176,7 +176,7 @@ After onboarding a new account on RG with the above steps, a new IAM role is cre
 - Search for the project role with the prefix: `RG-Portal-ProjectRole`.
 - Once the role is located, select the role to open its details.
 
-### 2. Add a Permission 
+### 2. Add a Permission
 
 - Click on **Add permissions** and select **Create inline policy**.
 - Copy and paste the following policy block to enable access to the KMS key:
@@ -199,13 +199,12 @@ After onboarding a new account on RG with the above steps, a new IAM role is cre
         }
     ]
 }
+```
 
+### 3. Retrieve the KMS Key ARN from the Main Account
 
-
-3. Retrieve the KMS Key ARN from the Main Account
-
-    Go to AWS Key Management Service (KMS) in the Main Account.
-    Locate the Customer Managed Key designated for EBS encryption and copy its ARN.
+ - Go to AWS Key Management Service (KMS) in the Main Account.
+ - Locate the Customer Managed Key designated for EBS encryption and copy its ARN.
 
 
 
