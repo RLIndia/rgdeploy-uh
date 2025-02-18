@@ -4,6 +4,19 @@
 
 Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guide provides documentation for onboarding a new project account on the Research Gateway product.
 
+| Step No. | Step                                      | Account         |  Method   |
+|----------|-------------------------------------------|-----------------|-----------|
+| 1 a.     | Associate VPC with Hosted Zone            | Orchestration   |  Manual   |
+| 1 b.     | Associate VPC Transit Gateway with N/W A/c| Network         |  Manual   |
+| 2        | Create ACM Certificate                    | Project         |  Manual   |
+| 3        | Create RG User                            | Project         |  Manual   |
+| 4        | KMS Policy Update                         | Orchestration   |  Manual   |
+| 5        | Template Bucket Policy Update             | Orchestration   |  Manual   |
+| 6        | Run Deploy Resources Script               | Project         |  Automated|
+| 7        | Add KMS Policy to Project Role            | Project         |  Manual   |
+
+
+
 ## Step-1. VPC Association & Resources Creation
 
 ### Pre-requisites:
