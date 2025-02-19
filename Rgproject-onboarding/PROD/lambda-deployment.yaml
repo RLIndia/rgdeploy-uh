@@ -45,6 +45,7 @@ Resources:
                   -  "s3-object-lambda:*"
                   -  "kms:*"
                 Resource: "*"
+
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -76,11 +77,21 @@ Resources:
           Value: txs908@miami.edu
         - Key: UHITOwner
           Value: txs908
+
   LambdaFunctionUrl:
     Type: AWS::Lambda::Url
     Properties:
       TargetFunctionArn: !Ref LambdaFunction
       AuthType: AWS_IAM
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: "AWS_IAM"  # Ensures IAM authentication
+
 Outputs:
   LambdaFunctionArn:
     Description: egressStoreLambdaARN 
