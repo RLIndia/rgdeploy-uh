@@ -56,7 +56,7 @@ Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway
 
 ---
 
-## Step-2. Create ACM Certificate
+## Step-2. Create ACM Certificate in Project Account
 
 ### Steps:
 
