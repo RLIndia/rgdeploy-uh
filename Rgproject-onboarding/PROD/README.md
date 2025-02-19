@@ -307,6 +307,7 @@ To create network security groups, egress resources, Lambda, and launch template
 
 ---
 
+ > **Note:** After successfully creating the `RG-Template-Versions` stack, log in to the **AWS Console**  using the **project account**, navigate to **Launch Templates**, select **`RG-IMDSv2`**, go to **Actions > Modify (Create New Version)**, keep the default values, and click **Create Template Version** to generate a new version of the template.
 
 
 
