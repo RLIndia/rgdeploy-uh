@@ -120,7 +120,6 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
    }
    ```
 5. **Save the Updated Policy.**
-6. **Verify Permissions by Testing Access in the Project Account.**
 
 ---
 
@@ -131,9 +130,7 @@ After successfully setting up a new account in RG, update the bucket policy befo
 1. **Log in to the RG Orchestration Account via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
    - QA: `rgqa-sec-templates1`
-   - Prod: `rgprod-cft-template`
-3. **Modify the Existing Bucket Policy to Include the Project Account.**
-4. **Save the Changes.**
+3. **Modify the Existing Bucket Policy (For that Go to the S3 bucket - > Permsiions - > Bucket policy - > Edit - > Modify the policy - > Save Chnages) to Include the Project Account in the follwing blocks : 1.Get:Artifacts 2.Get:BootstrapScripts 3.List:BootstrapScripts**
 
 ---
 
