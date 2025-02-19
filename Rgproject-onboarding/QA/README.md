@@ -26,7 +26,7 @@ A. VPC ID of the Newly Created Project Account
 
 Run the following command with replace of VPC ID on the RG Deployed Account from the Cloud Shell service:
 
-**Note:** RG Main Accounts on UHealth AWS Accounts:
+**Note:** RG Orchestration Accounts on UHealth AWS Accounts:
    - QA: `UHIT-HIPAA-NonProd-SRE-QA`
 
 1. Create VPC association authorization:
@@ -102,7 +102,7 @@ When setting up a new account on RG, access keys and a secret key must be passed
 
 ## Step-4. KMS Policy Update for AMI Copy to Project Accounts
 
-When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Main Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
+When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchestration Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
 
 ### Steps to Add Project Account to KMS Policy:
 
@@ -128,7 +128,7 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Main Ac
 
 After successfully setting up a new account in RG, update the bucket policy before project creation:
 
-1. **Log in to the RG Main Account via AWS Console.**
+1. **Log in to the RG Orchestration Account via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
    - QA: `rgqa-sec-templates1`
    - Prod: `rgprod-cft-template`
