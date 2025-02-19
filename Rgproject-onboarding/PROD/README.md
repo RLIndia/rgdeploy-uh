@@ -15,56 +15,43 @@ Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guid
 | 6        | Run Deploy Resources Script               | Project         |  Automated|
 | 7        | Add KMS Policy to Project Role            | Project         |  Manual   |
 
-## Step-1. VPC Association & Resources Creation
+## Step-1. VPC Association 
 
 ### Pre-requisites:
 
-a. Get Hosted Zone ID of RG Main Account
-   - QA: `qa.researchsre.miami.edu` - `Z070671526HXR9ZO8WWAK`
-   - Prod: `prod.researchsre.miami.edu` - `Z07179521FVHYWQT4X38T`
-
-b. VPC ID of the Newly Created Project Account
+1. VPC ID of the Newly Created Project Account
 
 ### A. Associate VPC with Hosted Zone
 
-Run the following commands on the RG Deployed Account from the Cloud Shell service:
+Run the following command with replace of VPC ID on the RG Deployed Account from the Cloud Shell service:
 
-1. List hosted zones:
+
+1. Create VPC association authorization:
    ```sh
-   aws route53 list-hosted-zones
-   ```
-2. List VPC association authorizations:
-   ```sh
-   aws route53 list-vpc-association-authorizations --hosted-zone-id "/hostedzone/<hostedzone-id>"
+   aws route53 create-vpc-association-authorization --hosted-zone-id "/hostedzone/Z07179521FVHYWQT4X38T" --vpc VPCRegion=us-east-1,VPCId=<vpc-id> --region us-east-1
    ```
    Example:
    ```sh
-   aws route53 list-vpc-association-authorizations --hosted-zone-id "/hostedzone/Z070671526HXR9ZO8WWAK"
+   aws route53 create-vpc-association-authorization --hosted-zone-id "/hostedzone/Z07179521FVHYWQT4X38T" --vpc VPCRegion=us-east-1,VPCId=vpc-05ca88b256fe8b2fc --region us-east-1
    ```
-3. Create VPC association authorization:
+2. Run the following command on the Network Account:
    ```sh
-   aws route53 create-vpc-association-authorization --hosted-zone-id "/hostedzone/<hostedzone-id>" --vpc VPCRegion=us-east-1,VPCId=<vpc-id> --region us-east-1
-   ```
-   Example:
-   ```sh
-   aws route53 create-vpc-association-authorization --hosted-zone-id "/hostedzone/Z070671526HXR9ZO8WWAK" --vpc VPCRegion=us-east-1,VPCId=vpc-05ca88b256fe8b2fc --region us-east-1
-   ```
-4. Run the following command on the Network Account:
-   ```sh
-   aws route53 associate-vpc-with-hosted-zone --hosted-zone-id "/hostedzone/<hosted-zoneid>" --vpc VPCRegion=us-east-1,VPCId=<vpc-id> --region us-east-1
+   aws route53 associate-vpc-with-hosted-zone --hosted-zone-id "/hostedzone/Z07179521FVHYWQT4X38T" --vpc VPCRegion=us-east-1,VPCId=<vpc-id> --region us-east-1
    ```
    Example:
    ```sh
-   aws route53 associate-vpc-with-hosted-zone --hosted-zone-id "/hostedzone/Z070671526HXR9ZO8WWAK" --vpc VPCRegion=us-east-1,VPCId=vpc-05ca88b256fe8b2fc --region us-east-1
+   aws route53 associate-vpc-with-hosted-zone --hosted-zone-id "/hostedzone/Z07179521FVHYWQT4X38T" --vpc VPCRegion=us-east-1,VPCId=vpc-05ca88b256fe8b2fc --region us-east-1
    ```
 
-**Note:** RG Main Accounts on UHealth AWS Accounts:
-   - QA: `UHIT-HIPAA-NonProd-SRE-QA`
+**Note:** RG Main Account on UHealth AWS Account:
    - Prod: `UHIT-HIPAA-Prod-SRE`
 
 ### B. Associate Project Account Transit Gateway Attachment ID to the Network Account
 
 Associating the transit gateway attachment ID of a child account with the network account in AWS ensures secure and centralized network connectivity.
+
+#### How to get Transit Gateway Attachment ID on project Account :
+Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway Attachments"** in the left pane → Locate the **VPC** attachment type → Match the **VPC ID** with yours → Find the **Transit Gateway Attachment ID** in the respective column.
 
 ---
 
