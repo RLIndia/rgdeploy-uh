@@ -25,6 +25,8 @@ Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guid
 
 Run the following command with replace of VPC ID on the RG Deployed Account from the Cloud Shell service:
 
+**Note:** RG Orchestration Account on UHealth AWS Account:
+   - Prod: `UHIT-HIPAA-Prod-SRE`
 
 1. Create VPC association authorization:
    ```sh
@@ -43,14 +45,13 @@ Run the following command with replace of VPC ID on the RG Deployed Account from
    aws route53 associate-vpc-with-hosted-zone --hosted-zone-id "/hostedzone/Z07179521FVHYWQT4X38T" --vpc VPCRegion=us-east-1,VPCId=vpc-05ca88b256fe8b2fc --region us-east-1
    ```
 
-**Note:** RG Main Account on UHealth AWS Account:
-   - Prod: `UHIT-HIPAA-Prod-SRE`
+
 
 ### B. Associate Project Account Transit Gateway Attachment ID to the Network Account
 
 Associating the transit gateway attachment ID of a child account with the network account in AWS ensures secure and centralized network connectivity.
 
-#### How to get Transit Gateway Attachment ID on project Account :
+#### How to get Transit Gateway Attachment ID on Project Account :
 Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway Attachments"** in the left pane → Locate the **VPC** attachment type → Match the **VPC ID** with yours → Find the **Transit Gateway Attachment ID** in the respective column.
 
 ---
@@ -68,7 +69,7 @@ Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway
 2. **Enter Certificate Details:**
    - In the **Certificate Body** field, paste the contents of `certificate.crt`.
    - In the **Certificate Private Key** field, paste the contents of `privatekey.pem`.
-   - In the **Certificate Chain** field, paste the contents of `certificate_chain.pem` (including intermediate and root certificates in order provided by the CA).
+   - In the **Certificate Chain** field, paste the contents of `certificate_chain.pem`.
 
 3. **Review and Import:**
    - Click **Next** after pasting all contents.
@@ -100,7 +101,7 @@ When setting up a new account on RG, access keys and a secret key must be passed
 
 ## Step-4. KMS Policy Update for AMI Copy to Project Accounts
 
-When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Main Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
+When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchestration Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
 
 ### Steps to Add Project Account to KMS Policy:
 
@@ -126,7 +127,7 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Main Ac
 
 After successfully setting up a new account in RG, update the bucket policy before project creation:
 
-1. **Log in to the RG Main Account via AWS Console.**
+1. **Log in to the RG Orchestration Account via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
    - QA: `rgqa-sec-templates1`
    - Prod: `rgprod-cft-template`
@@ -305,46 +306,6 @@ To create network security groups, egress resources, Lambda, and launch template
 7. **it will create RG network details and store those details under network.json under same folder and egress details were stored under egress.json file**
 
 ---
-
-## Step-7: Add KMS Policy to Project Role in the Project Account
-
-After onboarding a new account on RG with the above steps, a new IAM role is created in the project account. We need to add a KMS policy to that role by following these steps:
-
-### 1. Log in to the Project Account from the AWS Management Console
-
-- Navigate to the **IAM** service and select **Roles**.
-- Search for the project role with the prefix: `RG-Portal-ProjectRole`.
-- Once the role is located, select the role to open its details.
-
-### 2. Add a Permission
-
-- Click on **Add permissions** and select **Create inline policy**.
-- Copy and paste the following policy block to enable access to the KMS key:
-
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "kms:DescribeKey",
-                "kms:ReEncrypt*",
-                "kms:CreateGrant",
-                "kms:Decrypt"
-            ],
-            "Resource": [
-                "arn:aws:kms:us-east-1:730335491778:key/<KeyID>"
-            ]
-        }
-    ]
-}
-```
-
-### 3. Retrieve the KMS Key ARN from the Main Account
-
- - Go to AWS Key Management Service (KMS) in the Main Account.
- - Locate the Customer Managed Key designated for EBS encryption and copy its ARN.
 
 
 

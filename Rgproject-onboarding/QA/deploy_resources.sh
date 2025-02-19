@@ -148,8 +148,7 @@ fi
 
 #########################################################################################
 # Deploy Egress Resources Stack
-check_and_create_stack "RG-Egress-Resources" "egressresources.yml" ""
-
+check_and_create_stack "RG-Egress-Resources" "egressresources.yml" "--parameters ParameterKey=RGDomain,ParameterValue=QA"
 #########################################################################################
 # Deploy Lambda Stack
 check_and_create_stack "RG-Lambda-Deployment" "lambda-deployment.yaml" "--parameters ParameterKey=LambdaFunctionName,ParameterValue=egress-zip-copy ParameterKey=S3BucketName,ParameterValue=$S3_BUCKET ParameterKey=S3ObjectKey,ParameterValue=egress-zip-copy.zip"

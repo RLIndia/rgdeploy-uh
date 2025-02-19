@@ -148,7 +148,7 @@ fi
 
 #########################################################################################
 # Deploy Egress Resources Stack
-check_and_create_stack "RG-Egress-Resources" "egressresources.yml" ""
+check_and_create_stack "RG-Egress-Resources" "egressresources.yml" "--parameters ParameterKey=RGDomain,ParameterValue=PROD"
 
 #########################################################################################
 # Deploy Lambda Stack
