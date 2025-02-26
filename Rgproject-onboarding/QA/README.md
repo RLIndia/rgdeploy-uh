@@ -8,11 +8,10 @@ Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guid
 |----------|-------------------------------------------|-----------------|-----------|
 | 1 a.     | Associate VPC with Hosted Zone            | Orchestration   |  Manual   |
 | 1 b.     | Associate VPC Transit Gateway with N/W A/c| Network         |  Manual   |
-| 2        | Create ACM Certificate                    | Project         |  Manual   |
-| 3        | Create RG User                            | Project         |  Manual   |
-| 4        | KMS Policy Update                         | Orchestration   |  Manual   |
-| 5        | Template Bucket Policy Update             | Orchestration   |  Manual   |
-| 6        | Run Deploy Resources Script               | Project         |  Automated|
+| 2        | KMS Policy Update                         | Orchestration   |  Manual   |
+| 3        | Template Bucket Policy Update             | Orchestration   |  Manual   |
+| 4        | Run Deploy Resources Script               | Project         |  Automated|
+
 
 
 
@@ -57,60 +56,18 @@ Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway
 
 ---
 
-## Step-2. Create ACM Certificate in Project Account
-
-### Steps:
-
-1. **Prepare Certificate Files:**
-   - Ensure the following files from the network team are available (`.pfx` or `.pem` source):
-     - **Certificate Body**
-     - **Private Key**
-     - **Certificate Chain**
-
-2. **Enter Certificate Details:**
-   - In the **Certificate Body** field, paste the contents of `certificate.crt`.
-   - In the **Certificate Private Key** field, paste the contents of `privatekey.pem`.
-   - In the **Certificate Chain** field, paste the contents of `certificate_chain.pem`.
-
-3. **Review and Import:**
-   - Click **Next** after pasting all contents.
-   - Review the entries and click **Import** if everything is correct.
-
----
-
-## Step-3. Create RG User
-
-When setting up a new account on RG, access keys and a secret key must be passed. Follow these steps:
-
-### Sign in to the AWS Management Console from the Project Account:
-
-1. **Go to the IAM Console.**
-2. **Create a New User:**
-   - Navigate to **Users** and select **Add Users**.
-   - Enter a **Username** for the new user.
-3. **Set User Permissions:**
-   - Under **Set Permissions**, select **Attach Policies Directly**.
-   - Search for and select `AdministratorAccess`.
-4. **Review and Create User:**
-   - Review the settings and click **Create User**.
-5. **Download Access and Secret Keys:**
-   - Click on the created user and go to **Security Credentials**.
-   - Select **Create Access Keys**, choose **Other**, and enter a description.
-   - Securely save the generated access keys.
-
----
-
-## Step-4. KMS Policy Update for AMI Copy to Project Accounts
+## Step-2. KMS Policy Update for AMI Copy to Project Accounts
 
 When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchestration Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
 
 ### Steps to Add Project Account to KMS Policy:
 
-1. **Navigate to the KMS Console in the RG Deployed Account.**
-2. **Select the Customer Managed Key associated with EBS encryption.**
+1. **Log in to the RG Orchestration Account via AWS Console.**
+2. **Navigate to the KMS Console in the RG Deployed Account.**
+3. **Select the Customer Managed Key associated with EBS encryption.**
    - KMS Key Name: `accelerator/ebs/default-encryption/key`
-3. **Edit Key Policy.**
-4. **Modify the Principal Section to Include the Project Account ARN:**
+4. **Edit Key Policy.**
+5. **Modify the Principal Section to Include the Project Account ARN:**
    ```json
    {
        "Effect": "Allow",
@@ -119,13 +76,11 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
        "Resource": "*"
    }
    ```
-5. **Save the Updated Policy.**
+6. **Save the Updated Policy.**
 
 ---
 
-## Step-5. Modify RG Deploy Template Bucket Policy
-
-After successfully setting up a new account in RG, update the bucket policy before project creation:
+## Step-3. Modify RG Deploy Template Bucket Policy
 
 1. **Log in to the RG Orchestration Account via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
@@ -134,9 +89,9 @@ After successfully setting up a new account in RG, update the bucket policy befo
 
 ---
 
-## Step-6. Run Deploy Resources Script
+## Step-4. Run Deploy Resources Script
 
-To create network security groups, egress resources, Lambda, and launch templates:
+To create network security groups,ACM certificate creation,RG User creation,egress resources, Lambda, and launch templates:
 
 1. **Log in to AWS and open CloudShell.**
 2. **Clone the repository:**
