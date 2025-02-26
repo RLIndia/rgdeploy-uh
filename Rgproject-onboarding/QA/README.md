@@ -114,7 +114,7 @@ To create network security groups,ACM certificate creation,RG User creation,egre
    ```sh
    ./deploy_resources.sh
    ```
-7. **it will create RG network details and store those details under network.json under same folder and egress details were stored under egress.json file**
+7. **it will create Output.json file , It have the RG user Credentials,RG network details and egress details**
 
 ---
 
