@@ -56,7 +56,7 @@ Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway
 
 ---
 
-## Step-2. KMS Policy Update for AMI Copy to Project Accounts
+## Step-2. KMS Policy Update On Orchestration Account for AMI Copy to Project Accounts
 
 When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchestration Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
 
@@ -117,8 +117,6 @@ To create network security groups,ACM certificate creation,RG User creation,egre
 7. **it will create Output.json file , It have the RG user Credentials,RG network details and egress details**
 
 ---
-
-> **Note:** After successfully creating the `RG-Template-Versions` stack, log in to the **AWS Console**  using the **project account**, navigate to **Launch Templates**, select **`RG-IMDSv2`**, go to **Actions > Modify (Create New Version)**, keep the default values, and click **Create Template Version** to generate a new version of the template.
 
 
 
