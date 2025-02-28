@@ -100,7 +100,7 @@ To create network security groups,ACM certificate creation,RG User creation,egre
    ```
 3. **Navigate to the Project Onboarding Directory:**
    ```sh
-   cd rgdeploy-uh/Rgproject-onboarding/QA
+   cd rgdeploy-uh/Rgproject-onboarding/
    ```
 4. **Switch to the Environment Folder (e.g., QA):**
    ```sh
