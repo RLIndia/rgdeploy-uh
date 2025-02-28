@@ -8,24 +8,24 @@ Welcome to the RLCatalyst Research Gateway Project Account onboarding. This guid
 |----------|-------------------------------------------|-----------------|-----------|
 | 1 a.     | Associate VPC with Hosted Zone            | Orchestration   |  Manual   |
 | 1 b.     | Associate VPC Transit Gateway with N/W A/c| Network         |  Manual   |
-| 2        | Create ACM Certificate                    | Project         |  Manual   |
-| 3        | Create RG User                            | Project         |  Manual   |
-| 4        | KMS Policy Update                         | Orchestration   |  Manual   |
-| 5        | Template Bucket Policy Update             | Orchestration   |  Manual   |
-| 6        | Run Deploy Resources Script               | Project         |  Automated|
-| 7        | Add KMS Policy to Project Role            | Project         |  Manual   |
+| 2        | KMS Policy Update                         | Orchestration   |  Manual   |
+| 3        | Template Bucket Policy Update             | Orchestration   |  Manual   |
+| 4        | Run Deploy Resources Script               | Project         |  Automated|
 
-## Step-1. VPC Association 
+
+
+
+## Step-1. VPC Association
 
 ### Pre-requisites:
 
-1. VPC ID of the Newly Created Project Account
+A. VPC ID of the Newly Created Project Account
 
 ### A. Associate VPC with Hosted Zone
 
 Run the following command with replace of VPC ID on the RG Deployed Account from the Cloud Shell service:
 
-**Note:** RG Orchestration Account on UHealth AWS Account:
+**Note:** RG Orchestration Accounts on UHealth AWS Accounts:
    - Prod: `UHIT-HIPAA-Prod-SRE`
 
 1. Create VPC association authorization:
@@ -56,60 +56,18 @@ Open the **AWS VPC Console**  on Project Account → Click on **"Transit Gateway
 
 ---
 
-## Step-2. Create ACM Certificate in Project Account
-
-### Steps:
-
-1. **Prepare Certificate Files:**
-   - Ensure the following files from the network team are available (`.pfx` or `.pem` source):
-     - **Certificate Body**
-     - **Private Key**
-     - **Certificate Chain**
-
-2. **Enter Certificate Details:**
-   - In the **Certificate Body** field, paste the contents of `certificate.crt`.
-   - In the **Certificate Private Key** field, paste the contents of `privatekey.pem`.
-   - In the **Certificate Chain** field, paste the contents of `certificate_chain.pem`.
-
-3. **Review and Import:**
-   - Click **Next** after pasting all contents.
-   - Review the entries and click **Import** if everything is correct.
-
----
-
-## Step-3. Create RG User
-
-When setting up a new account on RG, access keys and a secret key must be passed. Follow these steps:
-
-### Sign in to the AWS Management Console from the Project Account:
-
-1. **Go to the IAM Console.**
-2. **Create a New User:**
-   - Navigate to **Users** and select **Add Users**.
-   - Enter a **Username** for the new user.
-3. **Set User Permissions:**
-   - Under **Set Permissions**, select **Attach Policies Directly**.
-   - Search for and select `AdministratorAccess`.
-4. **Review and Create User:**
-   - Review the settings and click **Create User**.
-5. **Download Access and Secret Keys:**
-   - Click on the created user and go to **Security Credentials**.
-   - Select **Create Access Keys**, choose **Other**, and enter a description.
-   - Securely save the generated access keys.
-
----
-
-## Step-4. KMS Policy Update for AMI Copy to Project Accounts
+## Step-2. KMS Policy Update On Orchestration Account for AMI Copy to Project Accounts
 
 When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchestration Account, they need to be copied to the Project Account. To enable this, the EBS KMS key should include account permissions to share AMIs.
 
 ### Steps to Add Project Account to KMS Policy:
 
-1. **Navigate to the KMS Console in the RG Deployed Account.**
-2. **Select the Customer Managed Key associated with EBS encryption.**
+1. **Log in to the RG Orchestration Account via AWS Console.**
+2. **Navigate to the KMS Console in the RG Deployed Account.**
+3. **Select the Customer Managed Key associated with EBS encryption.**
    - KMS Key Name: `accelerator/ebs/default-encryption/key`
-3. **Edit Key Policy.**
-4. **Modify the Principal Section to Include the Project Account ARN:**
+4. **Edit Key Policy.**
+5. **Modify the Principal Section to Include the Project Account ARN:**
    ```json
    {
        "Effect": "Allow",
@@ -118,166 +76,22 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
        "Resource": "*"
    }
    ```
-5. **Save the Updated Policy.**
+6. **Save the Updated Policy.**
 
 ---
 
-## Step-5. Modify RG Deploy Template Bucket Policy
-
-After successfully setting up a new account in RG, update the bucket policy before project creation:
+## Step-3. Modify RG Deploy Template Bucket Policy
 
 1. **Log in to the RG Orchestration Account via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
-   - Prod: `rgprod-cft-template`
+   - QA: `rgprod-cft-template`
 3. **Modify the Existing Bucket Policy (For that Go to the S3 bucket - > Permsiions - > Bucket policy - > Edit - > Modify the policy - > Save Chnages) to Include the Project Account in the follwing blocks : 1.Get:Artifacts 2.Get:BootstrapScripts 3.List:BootstrapScripts**
-4. **Sample bucket policy.**
-```json
-{ 
-
-    "Version": "2012-10-17", 
-
-    "Statement": [ 
-
-        { 
-
-            "Sid": "Get:Artifacts", 
-
-            "Effect": "Allow", 
-
-            "Principal": { 
-
-                "AWS": [ 
-
-                    "arn:aws:iam::418272783600:role/RG-Portal-ProjectRole-PROD-zzyi", 
-
-                    "arn:aws:iam::381492012479:role/RG-Portal-ProjectRole-PROD-zzyi" 
-
-                ] 
-
-            }, 
-
-            "Action": "s3:GetObject", 
-
-            "Resource": "arn:aws:s3:::rgprod-cft-template/*" 
-
-        }, 
-
-        { 
-
-            "Sid": "Get:BootstrapScripts", 
-
-            "Effect": "Allow", 
-
-            "Principal": { 
-
-                "AWS": [ 
-
-                    "arn:aws:iam::418272783600:root", 
-
-                    "arn:aws:iam::381492012479:root" 
-
-                ] 
-
-            }, 
-
-            "Action": "s3:GetObject", 
-
-            "Resource": "arn:aws:s3:::rgprod-cft-template/bootstrap-scripts/*" 
-
-        }, 
-
-        { 
-
-            "Sid": "List:BootstrapScripts", 
-
-            "Effect": "Allow", 
-
-            "Principal": { 
-
-                "AWS": [ 
-
-                    "arn:aws:iam::418272783600:root", 
-
-                    "arn:aws:iam::381492012479:root" 
-
-                ] 
-
-            }, 
-
-            "Action": "s3:ListBucket", 
-
-            "Resource": "arn:aws:s3:::rgprod-cft-template", 
-
-            "Condition": { 
-
-                "StringLike": { 
-
-                    "s3:prefix": "bootstrap-scripts*" 
-
-                } 
-
-            } 
-
-        }, 
-
-        { 
-
-            "Sid": "Deny requests that do not use TLS", 
-
-            "Effect": "Deny", 
-
-            "Principal": "*", 
-
-            "Action": "s3:*", 
-
-            "Resource": "arn:aws:s3:::rgprod-cft-template/*", 
-
-            "Condition": { 
-
-                "Bool": { 
-
-                    "aws:SecureTransport": "false" 
-
-                } 
-
-            } 
-
-        }, 
-
-        { 
-
-            "Sid": "Deny requests that do not use SigV4", 
-
-            "Effect": "Deny", 
-
-            "Principal": "*", 
-
-            "Action": "s3:*", 
-
-            "Resource": "arn:aws:s3:::rgprod-cft-template/*", 
-
-            "Condition": { 
-
-                "StringNotEquals": { 
-
-                    "s3:signatureversion": "AWS4-HMAC-SHA256" 
-
-                } 
-
-            } 
-
-        } 
-
-    ] 
-
-} 
-```
 
 ---
 
-## Step-6. Run Deploy Resources Script
+## Step-4. Run Deploy Resources Script
 
-To create network security groups, egress resources, Lambda, and launch templates:
+To create network security groups,ACM certificate creation,RG User creation,egress resources, Lambda, and launch templates:
 
 1. **Log in to AWS and open CloudShell.**
 2. **Clone the repository:**
@@ -286,7 +100,7 @@ To create network security groups, egress resources, Lambda, and launch template
    ```
 3. **Navigate to the Project Onboarding Directory:**
    ```sh
-   cd rgdeploy-uh/Rgproject-onboarding
+   cd rgdeploy-uh/Rgproject-onboarding/QA
    ```
 4. **Switch to the Environment Folder (e.g., QA):**
    ```sh
@@ -300,11 +114,11 @@ To create network security groups, egress resources, Lambda, and launch template
    ```sh
    ./deploy_resources.sh
    ```
-7. **it will create RG network details and store those details under network.json under same folder and egress details were stored under egress.json file**
+7. **it will create Output.json file , It have the RG user Credentials,RG network details and egress details**
 
 ---
 
- > **Note:** After successfully creating the `RG-Template-Versions` stack, log in to the **AWS Console**  using the **project account**, navigate to **Launch Templates**, select **`RG-IMDSv2`**, go to **Actions > Modify (Create New Version)**, keep the default values, and click **Create Template Version** to generate a new version of the template.
+
 
 
 
