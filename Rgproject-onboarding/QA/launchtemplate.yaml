@@ -1,15 +1,34 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create target bucket to store rg-deployment-docs
+Description: Create and update Launch Template with versioning for RG-IMDSv2
+
 Resources:
   IMDSv2LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: "RG-IMDSv2"
+      LaunchTemplateName: "RGQ-IMDSv2"
       LaunchTemplateData:
         MetadataOptions:
           HttpEndpoint: enabled
           HttpPutResponseHopLimit: 2
           HttpTokens: required
+
+  IMDSv2LaunchTemplateVersion:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateId: !Ref IMDSv2LaunchTemplate
+      VersionDescription: "Automated version update"
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+
+  SetDefaultLaunchTemplateVersion:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: "RGQ-IMDSv2"
+      DefaultVersionNumber: !GetAtt IMDSv2LaunchTemplateVersion.VersionNumber
+
 
   ProjectAccountAccessLogsBucketKMSKey:
     Type: AWS::KMS::Key
@@ -37,7 +56,7 @@ Resources:
       BucketName:
         !Join 
           - "-"
-          - - "rg-qa2-project-account-accesslogs"
+          - - "rg-qq-project-account-accesslogs"
             - !Ref "AWS::AccountId"
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -97,3 +116,11 @@ Outputs:
   ProjectAccountAccessLogsBucketKMSKey:
     Description: The KMS key used to encrypt the Project account access logs bucket
     Value: !GetAtt ProjectAccountAccessLogsBucketKMSKey.Arn
+
+  LaunchTemplateID:
+    Description: The ID of the launch template
+    Value: !Ref IMDSv2LaunchTemplate
+
+  LatestLaunchTemplateVersion:
+    Description: The latest version of the launch template
+    Value: !Ref IMDSv2LaunchTemplateVersion  
