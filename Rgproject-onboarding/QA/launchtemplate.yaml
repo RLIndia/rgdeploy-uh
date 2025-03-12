@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create and update Launch Template with versioning for RG-IMDSv2
+
+Resources:
+  IMDSv2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: "RGQ-IMDSv2"
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+
+  IMDSv2LaunchTemplateVersion:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateId: !Ref IMDSv2LaunchTemplate
+      VersionDescription: "Automated version update"
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpEndpoint: enabled
+          HttpPutResponseHopLimit: 2
+          HttpTokens: required
+
+  SetDefaultLaunchTemplateVersion:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: "RGQ-IMDSv2"
+      DefaultVersionNumber: !GetAtt IMDSv2LaunchTemplateVersion.VersionNumber
+
+
+  ProjectAccountAccessLogsBucketKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key for Deployment Access logs bucket
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable IAM Policies
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+
+  ProjectAccountAccessLogsBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: S3 bucket hosting access logs shouldn't have access logging configured
+    Properties:
+      BucketName:
+        !Join 
+          - "-"
+          - - "rg-qq-project-account-accesslogs"
+            - !Ref "AWS::AccountId"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt ProjectAccountAccessLogsBucketKMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  ProjectAccountAccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ProjectAccountAccessLogsBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ELB-Account-Allow
+            Effect: Allow
+            Principal:
+              AWS: "arn:aws:iam::127311923021:root"
+            Action: "s3:PutObject"
+            Resource: !Sub "arn:aws:s3:::${ProjectAccountAccessLogsBucket}/*"
+          - Sid: RG-Project-ALB-AccessLogsPolicy
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${ProjectAccountAccessLogsBucket}/RG-Project-ALB/*"
+            Principal:
+              Service: 'elasticloadbalancing.amazonaws.com'
+            Condition:
+              StringEquals:
+                "aws:SourceAccount": !Sub "${AWS::AccountId}"
+              ArnLike:
+                "aws:SourceArn": !Sub "arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:loadbalancer/app/RG-Project-ALB/*"
+
+          - Sid: S3ServerAccessLogsPolicy-DeploymentBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${ProjectAccountAccessLogsBucket}/*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
+
+Outputs:
+  ProjectAccountAccessLogsBucket:
+    Description: Name of the project account access logs bucket
+    Value: !Ref ProjectAccountAccessLogsBucket
+
+  ProjectAccountAccessLogsBucketKMSKey:
+    Description: The KMS key used to encrypt the Project account access logs bucket
+    Value: !GetAtt ProjectAccountAccessLogsBucketKMSKey.Arn
+
+  LaunchTemplateID:
+    Description: The ID of the launch template
+    Value: !Ref IMDSv2LaunchTemplate
+
+  LatestLaunchTemplateVersion:
+    Description: The latest version of the launch template
+    Value: !Ref IMDSv2LaunchTemplateVersion  

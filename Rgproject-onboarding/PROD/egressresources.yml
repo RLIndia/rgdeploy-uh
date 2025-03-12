@@ -1,0 +1,297 @@
+# (c) 2022 Amazon Web Services, Inc. or its affiliates. All Rights Reserved.
+# This AWS Content is provided subject to the terms of the AWS Customer
+# Agreement available at https://aws.amazon.com/agreement or other written
+# agreement between Customer and Amazon Web Services, Inc
+
+###############################################################################
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Provision all the required resources for TRE Egress application setup in RG.
+Parameters:
+  RGDomain:
+    Type: String
+    Description: RG Domain that will access the Egress Store
+Resources:
+  EgressAccessLogsBucketKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key for Egress Access logs bucket
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Enable IAM Policies
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+
+  EgressAccessLogsBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: S3 bucket hosting access logs shouldn't have access logging configured
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt EgressAccessLogsBucketKMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  EgressAccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EgressAccessLogsBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: S3ServerAccessLogsPolicy-EgressStoreBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/egressStore*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              ArnLike:
+                "aws:SourceArn":
+                  - !GetAtt EgressStoreBucket.Arn
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
+          - Sid: S3ServerAccessLogsPolicy-EgressNotificationBucket
+            Action:
+              - "s3:PutObject"
+            Effect: Allow
+            Resource: !Sub "arn:aws:s3:::${EgressAccessLogsBucket}/egressNotificationBucket*"
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Condition:
+              ArnLike:
+                "aws:SourceArn":
+                  - !GetAtt EgressNotificationBucket.Arn
+              StringEquals:
+                "aws:SourceAccount":
+                  - !Sub "${AWS::AccountId}"
+  EgressStoreEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: >-
+        Master key used to encrypt objects stored in the egress-store bucket
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: egress-store-kms-policy
+        Statement:
+          - Sid: Allow root
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action:
+              - "kms:*"
+            Resource: "*"
+          # - Sid: Allow API access to create object and update policy for new workspaces
+          #   Effect: Allow
+          #   Principal:
+          #     AWS:
+          #       - !Sub "arn:aws:iam::${AWS::AccountId}:role/RGPortalUser"
+          #   Action:
+          #     - kms:GenerateDataKey
+          #     - kms:DescribeKey
+          #     - kms:GetKeyPolicy
+          #     - kms:PutKeyPolicy
+          #   Resource: "*"
+          # - Sid: Allow workflows to update key policy for new workspaces
+          #   Effect: Allow
+          #   Principal:
+          #     AWS:
+          #       - !Sub "arn:aws:iam::${AWS::AccountId}:role/RGPortalUser"
+          #   Action:
+          #     - kms:GenerateDataKey
+          #     - kms:Decrypt
+          #     - kms:DescribeKey
+          #     - kms:Encrypt
+          #     - kms:ReEncrypt*
+          #     - kms:GetKeyPolicy
+          #     - kms:PutKeyPolicy
+          #   Resource: "*"
+
+  EgressStoreEncryptionKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/${AWS::AccountId}-rg/s3/egressstore"
+      TargetKeyId: !Ref EgressStoreEncryptionKey
+
+  # S3 bucket used to store egress data from workspace
+  EgressStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-rg-egress-store"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt EgressStoreEncryptionKey.Arn
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      LoggingConfiguration:
+        DestinationBucketName: !Ref EgressAccessLogsBucket
+        LogFilePrefix: egressStore/
+      VersioningConfiguration:
+        Status: Enabled
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - !Ref RGDomain 
+            AllowedMethods:
+              - POST
+            ExposedHeaders:
+              - ETag  
+      PublicAccessBlockConfiguration: # Block all public access configuration for the S3 bucket
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  # S3 bucket policy used to store egress data from workspace
+  EgressStoreBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EgressStoreBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Id: PutObjectPolicy
+        Statement:
+          - Sid: Deny requests that do not use TLS/HTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Join ["/", [!GetAtt EgressStoreBucket.Arn, "*"]]
+              - !GetAtt EgressStoreBucket.Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          - Sid: Deny requests that do not use TLS 1.2 or higher
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Join ["/", [!GetAtt EgressStoreBucket.Arn, "*"]]
+              - !GetAtt EgressStoreBucket.Arn
+            Condition:
+              NumericLessThan:
+                's3:TLSVersion': '1.2' 
+          - Sid: Deny requests that do not use SigV4
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource: !Join ["/", [!GetAtt EgressStoreBucket.Arn, "*"]]
+            Condition:
+              StringNotEquals:
+                s3:signatureversion: "AWS4-HMAC-SHA256"
+  # S3 snapshot(egress copy) bucket used to copy the egress data from workspace bucket
+  EgressNotificationBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::AccountId}-rg-egress-notification-bucket"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt EgressStoreEncryptionKey.Arn
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      LoggingConfiguration:
+        DestinationBucketName: !Ref EgressAccessLogsBucket
+        LogFilePrefix: egressNotificationBucket/
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - "https://d2bit1tve2oue7.cloudfront.net"
+            AllowedMethods:
+              - POST
+            ExposedHeaders:
+              - ETag
+      PublicAccessBlockConfiguration: # Block all public access configuration for the S3 bucket
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+  # S3 snapshot(copy egress) bucket policy used to copy the egress data from workspace bucket
+  EgressNotificationBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EgressNotificationBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Id: PutObjectPolicy
+        Statement:
+          - Sid: Deny requests that do not use TLS/HTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Join ["/", [!GetAtt EgressNotificationBucket.Arn, "*"]]
+              - !GetAtt EgressNotificationBucket.Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          - Sid: Deny requests that do not use TLS 1.2 or higher
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Join ["/", [!GetAtt EgressNotificationBucket.Arn, "*"]]
+              - !GetAtt EgressNotificationBucket.Arn
+            Condition:
+              NumericLessThan:
+                's3:TLSVersion': '1.2' 
+          - Sid: Deny requests that do not use SigV4
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource: !Join ["/", [!GetAtt EgressNotificationBucket.Arn, "*"]]
+            Condition:
+              StringNotEquals:
+                s3:signatureversion: "AWS4-HMAC-SHA256"
+Outputs:
+  EgressStoreBucketArn:
+    Description: ARN of the Egress Store Bucket
+    Value: !GetAtt EgressStoreBucket.Arn
+
+  EgressStoreKmsArn:
+    Description: ARN of the KMS key used for Egress Store Bucket encryption
+    Value: !GetAtt EgressStoreEncryptionKey.Arn
+
+  EgressStoreBucketName:
+    Description: Name of the Egress Store Bucket
+    Value: !Ref EgressStoreBucket
+
+  EgressStoreNotificationBucketName:
+    Description: Name of the Egress Notification Bucket
+    Value: !Ref EgressNotificationBucket
+
+  EgressStoreName:
+    Description: Stack name, used as the Egress Store Name
+    Value: !Ref AWS::StackName
+
+  Region:
+    Description: Region where the stack is deployed
+    Value: !Ref AWS::Region
+
+
+
