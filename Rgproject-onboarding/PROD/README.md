@@ -62,8 +62,8 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
 
 ### Steps to Add Project Account to KMS Policy:
 
-1. **Log in to the RG Orchestration Account via AWS Console.**
-2. **Navigate to the KMS Console in the RG Deployed Account.**
+1. **Log in to the RG Orchestration Account - UHIT-HIPAA-Prod-SRE via AWS Console.**
+2. **Navigate to the KMS Console.**
 3. **Select the Customer Managed Key associated with EBS encryption.**
    - KMS Key Name: `accelerator/ebs/default-encryption/key`
 4. **Edit Key Policy.**
@@ -82,9 +82,9 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
 
 ## Step-3. Modify RG Deploy Template Bucket Policy
 
-1. **Log in to the RG Orchestration Account via AWS Console.**
+1. **Log in to the RG Orchestration Account- UHIT-HIPAA-Prod-SRE via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
-   - QA: `rgprod-cft-template`
+   - PROD: `rgprod-cft-template`
 3. **Modify the Existing Bucket Policy (For that Go to the S3 bucket - > Permsiions - > Bucket policy - > Edit - > Modify the policy - > Save Chnages) to Include the Project Account in the follwing blocks : 1.Get:Artifacts 2.Get:BootstrapScripts 3.List:BootstrapScripts**
 
 ---
