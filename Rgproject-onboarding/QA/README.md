@@ -85,7 +85,7 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
 1. **Log in to the RG Orchestration Account - UHIT-HIPAA-NonProd-SRE-QA via AWS Console.**
 2. **Select the RG Deployed Template Bucket:**
    - QA: `rgqa-sec-templates1`
-3. **Modify the Existing Bucket Policy (For that Go to the S3 bucket - > Permsiions - > Bucket policy - > Edit - > Modify the policy - > Save Chnages) to Include the Project Account in the follwing blocks : 1.Get:Artifacts 2.Get:BootstrapScripts 3.List:BootstrapScripts**
+3. **Modify the Existing Bucket Policy (For that Go to the S3 bucket - > Permsiions - > Bucket policy - > Edit - > Modify the policy - > Save Changes) to Include the Project Account in the follwing blocks : 1.Get:Artifacts 2.Get:BootstrapScripts 3.List:BootstrapScripts**
 
 ---
 
@@ -93,7 +93,7 @@ When creating AMIs via the EC2 Image Builder pipeline in the RG Deployed Orchest
 
 To create network security groups,ACM certificate creation,RG User creation,egress resources, Lambda, and launch templates:
 
-1. **Log in to AWS and open CloudShell.**
+1. **Log in to Project AWS Account and open CloudShell.**
 2. **Clone the repository:**
    ```sh
    git clone https://github.com/RLIndia/rgdeploy-uh.git
